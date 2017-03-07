@@ -13,7 +13,7 @@ z				1	0	0	1e-9	1e0
 l				1	0	1	1		15
 cpu				0	0	0	1e-9	1e9
 gdata.d			0	0	0	1e-9	1e9	
-density			0	0	0	1e-9	1e9	
+density			1	0	0	1e-9	1e9	
 gdata.p			0	0	0	1e-9	1e9	
 res				0	0	0	1e-9	1e9	
 f[0]			0	0	0	1e-9	1e9	

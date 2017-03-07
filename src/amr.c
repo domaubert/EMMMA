@@ -86,7 +86,8 @@ void mark_nei(unsigned int level, struct CPU *cpu, struct PARAM *param, int ismo
     if((cell->marked>0)&&(cell->marked<marker)){
       unsigned long neikey[27];
       nei27(cell,neikey);
-      for(int inei=0;inei<27;inei++){
+      int inei;
+      for(inei=0;inei<27;inei++){
 	struct CELL *lcell;
 	if(inei==13) continue; //skip central cell
 	lcell=getcell(neikey+inei,level,cpu);

@@ -1,5 +1,6 @@
 #define RANK_DISP 0
 #define NCOSMOTAB (8192)
+#define N_BIN_PDF (128)
 
 // ================= PHYSICAL CONSTANTS ===================
 #define LIGHT_SPEED_IN_M_PER_S (299792458.) // m.s-1

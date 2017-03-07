@@ -226,6 +226,7 @@ struct PART * getpart(unsigned long *key,int level,struct CPU *cpu){
   if((part)&&(part>cpu->part)){
     while((part-1)->key==*key){
       part--;
+      if(part==cpu->part) break;
     }
   }
   return part;

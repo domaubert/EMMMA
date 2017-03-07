@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include <math.h>
+#include "math.h"
 
 #include "prototypes.h"
 #include "morton.h"
@@ -94,8 +94,8 @@ int PoissonJacobi_single(int level, struct CPU *cpu, REAL dx, int flag, REAL fac
       temp=0.;
       res=0.;
 
-      
-      for(int inei=0;inei<6;inei++){
+      int inei;
+      for(inei=0;inei<6;inei++){
 	struct CELL *lcell;
 	REAL data;
 	lcell=getcell(neikey+inei,level,cpu);
@@ -259,7 +259,7 @@ REAL PoissonJacobi(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
     }
     
     // - Smoothing Operation
-    int nread=PoissonJacobi_single(level,cpu,dxcur,(iter==0),factdens);
+    nread=PoissonJacobi_single(level,cpu,dxcur,(iter==0),factdens);
     
     // - Residual calculation
     rloc=comp_residual(level,cpu,(iter==0));
@@ -606,7 +606,8 @@ void PoissonForce(unsigned int level, struct CPU *cpu, struct PARAM *param, REAL
     cell->gdata.f[1]=0.;
     cell->gdata.f[2]=0.;
 
-    for(int inei=0;inei<6;inei++){
+    int inei;
+    for(inei=0;inei<6;inei++){
       struct CELL *lcell;
       REAL data;
       lcell=getcell(neikey+inei,level,cpu);

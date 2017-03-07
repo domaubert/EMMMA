@@ -415,10 +415,11 @@ if (debug) printf("flag\n");
 	z=(z0+dispz[(i1-1)+(i2-1)*np1]/(h0/100.))/(np3*dx);
 #endif
 	// periodic boundary conditions
-
+	
 	x+=((x<0.)-(x>1.))*1.;
 	y+=((y<0.)-(y>1.))*1.;
 	z+=((z<0.)-(z>1.))*1.;
+	
 
 	// ugly fix for huge config in SINGLE FLOAT precision
 	// generally affects a tiny fraction of particle (like 1 over 1e7)

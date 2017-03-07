@@ -205,19 +205,17 @@ void readOutputParam_grid(char *fparam, struct PARAM *param){
     }
 
 #ifdef SINGLEPRECISION
-    //char* type= "%d %d %d %e %e\n";
-char* type= "%d %d %d\n";
+    char* type= "%d %d %d %e %e\n";
 #else
-//char* type= "%d %d %d %le %le\n";
-char* type= "%d %d %d\n";
+char* type= "%d %d %d %le %le\n";
 #endif // SINGLEPRECISION
 
     size_t status=fscanf(f, type,
-          &(param->out_grid->field_state_grid[n_field_tot]),
-          &(param->out_grid->field_state_movie[n_field_tot]),
-          &(param->out_grid->field_state_stat[n_field_tot])
-			 //          &(param->physical_state->field[n_field_tot].bin_min),
-			 //&(param->physical_state->field[n_field_tot].bin_max)
+			 &(param->out_grid->field_state_grid[n_field_tot]),
+			 &(param->out_grid->field_state_movie[n_field_tot]),
+			 &(param->out_grid->field_state_stat[n_field_tot]),
+			 &(param->physical_state->field[n_field_tot].bin_min),
+			 &(param->physical_state->field[n_field_tot].bin_max)
           );
 
     if (debug) printf("%s\t",stream);

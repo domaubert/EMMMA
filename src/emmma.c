@@ -44,8 +44,8 @@ int main(int argc, char *argv[]){
   param.out_part=&out_part;
 
 
-/*   struct PHYSICAL_STATE physical_state; */
-/*   param.physical_state = &physical_state; */
+  struct PHYSICAL_STATE physical_state; 
+  param.physical_state = &physical_state; 
 
 
   //=========== some initial calls =============
@@ -164,9 +164,17 @@ int main(int argc, char *argv[]){
 #endif
       
       // once particles have been read from grafic, we sort and reoganize part data
+      build_init_part(&cpu,&param);
       reorgpart(&cpu,&param);
       tinit=ainit;
       tsim=tinit;
+
+      printf("%d %d\n",param.lcoarse,param.lmax);
+
+      for(level=param.lcoarse;level<=param.lmax;level++){
+	printf("level=%d FP=%lu key=%lu npart=%lu\n",level,cpu.firstpart[level],cpu.part[cpu.firstpart[level]].key,cpu.npart[level]); 
+      } 
+
 
   }
   else{

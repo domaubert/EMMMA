@@ -19,7 +19,7 @@ endif
 
 # main compiler
 CC= gcc
-C_FLAGS=  -g -O2 -Wall #-ftree-vectorize -ffast-math -fno-cx-limited-range -O3 -Wimplicit -g
+C_FLAGS=  -g -O2 -Wall  #-ftree-vectorize -ffast-math -fno-cx-limited-range -O3 -Wimplicit -g
 C_LIBS= -lm #-fopenmp -lstdc++
 
 #GPU compiler
@@ -72,7 +72,7 @@ OBJDIR = obj
 SRCDIR = src
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) $(C_FLAGS) $(DEFINES) $(I_DIR) -c $< -o $@
+	$(CC) $(C_FLAGS) $(C_LIBS) $(DEFINES) $(I_DIR) -c $< -o $@ 
 
 ifeq ($(ARCH),GPU)
 $(OBJDIR)/%.o: $(SRCDIR)/%.cu
@@ -101,7 +101,7 @@ LCC=$(CC)
 endif
 
 all:$(OBJ)
-	$(LCC) $(OBJ) $(LD_DIR) $(C_FLAGS) $(C_LIBS) -o $(EXECUTABLE) $(LD_FLAGS)
+	$(LCC) $(OBJ) $(LD_DIR) $(C_FLAGS) $(C_LIBS) -o $(EXECUTABLE) $(LD_FLAGS) 
 
 # oct2grid:
 # 	$(CC) $(DEFINESGLOB) $(C_LIBS) $(C_FLAGS) utils/oct2grid.c -o utils/oct2grid -lm

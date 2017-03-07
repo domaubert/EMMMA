@@ -13,7 +13,8 @@ void allocation(struct CPU *cpu,struct PARAM *param){
 
   cpu->grid=(struct CELL*)calloc(param->ngridmax,sizeof(struct CELL));
   printf("allocated %ld MB\n",param->ngridmax*sizeof(struct CELL)/(1024*1024));
-  for(int i=0;i<param->ngridmax;i++) cpu->grid[i].key=KEYMAX; // INIT TO HUGE KEY
+  int i;
+  for(i=0;i<param->ngridmax;i++) cpu->grid[i].key=KEYMAX; // INIT TO HUGE KEY
 
 
   cpu->firstcell=(unsigned long *)calloc(param->lmax+1,sizeof(unsigned long));
@@ -22,7 +23,7 @@ void allocation(struct CPU *cpu,struct PARAM *param){
 
 #ifdef PIC
   cpu->part=(struct PART*)calloc(param->npartmax,sizeof(struct PART));
-  for(int i=0;i<param->npartmax;i++){ 
+  for(i=0;i<param->npartmax;i++){ 
     cpu->part[i].key=KEYMAX; // INIT TO HUGE KEY
     cpu->part[i].newkey=KEYMAX; // INIT TO HUGE KEY
   }

@@ -10,7 +10,8 @@
 void part2cell(struct PART *part, struct CELL *cell, struct CPU *cpu, unsigned long *neikey, int level){
   REAL dx=1./(1<<level);
   REAL dpart=part->mass/(dx*dx*dx);
-  for(int inei=0;inei<27;inei++){ // Brute force, we look for the 27 neighbors
+  int inei;
+  for(inei=0;inei<27;inei++){ // Brute force, we look for the 27 neighbors
     struct CELL *lcell;
     lcell=getcell(neikey+inei,level,cpu);
     if(lcell){
@@ -21,12 +22,16 @@ void part2cell(struct PART *part, struct CELL *cell, struct CPU *cpu, unsigned l
       REAL w=1.;
       int i;
       for(i=0;i<3;i++){
-	REAL d=(part->x[i]-xc[i])/dx;
+	REAL dpc=part->x[i]-xc[i];
+	dpc=(dpc>0.5?1.-dpc:(dpc<-0.5?1.+dpc:dpc)); // dealing with boundary conditions
+
+	REAL d=dpc/dx;
 	w*=(d>=1.?0.:(d<=-1.?0.:(d<0.?1.+d:1.-d)));
       }
       lcell->cicdens+=w*dpart;
     }
   }
+
 }
 
 
@@ -38,7 +43,8 @@ void cell2part(struct PART *part, struct CELL *cell, struct CPU *cpu, unsigned l
   REAL accel[3]={0.,0.,0.};
   int ic; // for directions
   int lowres=0;
-  for(int inei=0;inei<27;inei++){ // Brute force, we look for the 27 neighbors
+  int inei;
+  for(inei=0;inei<27;inei++){ // Brute force, we look for the 27 neighbors
     struct CELL *lcell;
     lcell=getcell(neikey+inei,level,cpu);
     if(lcell){
@@ -64,7 +70,8 @@ void cell2part(struct PART *part, struct CELL *cell, struct CPU *cpu, unsigned l
   if(lowres){
     for(ic=0;ic<3;ic++) accel[ic]=0.;
     dx=1./(1<<(level-1));
-    for(int inei=0;inei<27;inei++){ // Brute force, we look for the 27 neighbors
+    int inei;
+    for(inei=0;inei<27;inei++){ // Brute force, we look for the 27 neighbors
       struct CELL *lcell;
       lcell=getcell(neikeymum+inei,level-1,cpu);
       if(lcell){
@@ -100,7 +107,8 @@ void cell2part(struct PART *part, struct CELL *cell, struct CPU *cpu, unsigned l
 void part2cell_13(struct PART *part, struct CELL *cell, struct CPU *cpu,  unsigned long *neikey, int level){
   REAL dx=1./(1<<level);
   REAL dpart=part->mass/(dx*dx*dx);
-  for(int inei=13;inei<14;inei++){ // Brute force, we look for the 27 neighbors
+  int inei;
+  for(inei=13;inei<14;inei++){ // Brute force, we look for the 27 neighbors
     struct CELL *lcell;
     lcell=getcell(neikey+inei,level,cpu);
     if(lcell){
@@ -202,7 +210,8 @@ void cic(unsigned int level, struct CPU *cpu, struct PARAM *param){
       mumcell=getcell(&mumkey,level-1,cpu);
       unsigned long neikeymum[27];
       nei27(mumcell,neikeymum);
-      for(int inei=0;inei<27;inei++){
+      int inei;
+      for(inei=0;inei<27;inei++){
 	struct CELL *lcell;
 	lcell=getcell(neikeymum+inei,level-1,cpu);
 	if(lcell){

@@ -1,3 +1,5 @@
+#include "constant.h"
+
 
 #ifdef SINGLEPRECISION
 // SINGLE PRECISION CASE
@@ -143,6 +145,45 @@ struct CPU{
 };
 #endif
 
+struct FIELD_INFO{
+  double min;
+  double max;
+  double mean;
+  double sigma;
+
+  double bin_min;
+  double bin_max;
+  double bins_edges[N_BIN_PDF+1];
+  double pdf[N_BIN_PDF];
+};
+
+
+struct PHYSICAL_STATE{
+
+  int n_field;
+  struct FIELD_INFO field[OUTPUTPARAM_n_field_max];
+
+  double sfr;
+  double v;
+
+  double src;
+  double mstar;
+  double mstar_sfr;
+  double t;
+
+  int max_level;
+  int Nsn;
+
+  REAL dt_ff;
+  REAL dt_hydro;
+  REAL dt_cosmo;
+  REAL dt_pic;
+  REAL dt_rad;
+};
+
+
+
+
 struct PARAM{
   unsigned int lmax;
   unsigned int lcoarse;
@@ -188,7 +229,7 @@ struct PARAM{
 
   struct COSMOPARAM *cosmo; ///< the cosmological parameters
 
-  //struct PHYSICAL_STATE *physical_state;
+  struct PHYSICAL_STATE *physical_state;
 
   REAL aexpdump; // the next expansion factor to be dumped
 
