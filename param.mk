@@ -1,0 +1,4 @@
+#------------ PRECISION OPTIONS ---------------------
+DEFINES  +=  -DSINGLEPRECISION
+DEFINES  +=  -DPIC
+DEFINES  +=  -DEMMAZELDO

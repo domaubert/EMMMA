@@ -1,0 +1,3 @@
+int crit_phy(struct CELL *cell);
+void mark_phy(unsigned int level, struct CPU *cpu, struct PARAM *param);
+void amr(unsigned int level, struct CPU *cpu, struct PARAM *param);

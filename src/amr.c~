@@ -1,0 +1,173 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <sys/stat.h>
+#include <string.h>
+
+#include "prototypes.h"
+#include "constant.h"
+#include "morton.h"
+
+//=====================================================
+
+int crit_phy(struct CELL *cell){
+  unsigned int level;
+  REAL x[3];
+
+  key2cen(cell->key,x,&level);
+  if(POW(x[0]-0.5,2)+POW(x[1]-0.5,2)+POW(x[2]-0.5,2)<POW(0.3,2)) return 1;
+  return 0;
+}
+
+
+//=====================================================
+void mark_phy(unsigned int level, struct CPU *cpu, struct PARAM *param, int ismooth){
+
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+  unsigned long nidx=cpu->ncell[level];
+  unsigned long idx;
+  int nm=0;
+  int marker=3+3*ismooth;
+
+  for(idx=0;idx<nidx;idx++){
+    if((cell->marked==0)&&(crit_phy(cell))){
+      cell->marked=marker;
+      nm++;
+    }
+    cell++;
+  }
+
+  printf("%d/%ld PHY marked  on level %d\n",nm,nidx,level);
+}
+
+
+//=====================================================
+void mark_child(unsigned int level, struct CPU *cpu, struct PARAM *param, int ismooth){
+
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+  unsigned long nidx=cpu->ncell[level];
+  unsigned long idx;
+  int nm=0;
+  int marker=1+3*ismooth;
+
+  for(idx=0;idx<nidx;idx++){
+    if((cell->marked==0)&&(cell->child)){
+      unsigned long icell;
+      unsigned long root=cell->key<<3; // root key for all the childs
+      int smark=0;
+      for(icell=0;icell<8;icell++){
+	unsigned long key=(root|icell); //key for a child
+	struct CELL *lcell;
+	lcell=getcell(&key,level,cpu);
+	smark+=((lcell->child)||(lcell->marked));
+      }
+      if(smark){
+	cell->marked=marker;
+	nm++;
+      }
+    }
+    cell++;
+  }
+
+  printf("%d/%ld CHI marked  on level %d\n",nm,nidx,level);
+}
+
+
+//=====================================================
+void mark_nei(unsigned int level, struct CPU *cpu, struct PARAM *param, int ismooth){
+
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+  unsigned long nidx=cpu->ncell[level];
+  unsigned long idx;
+  int nm=0;
+  int marker=2+3*ismooth;
+
+  for(idx=0;idx<nidx;idx++){
+    if((cell->marked>0)&&(cell->marked<marker)){
+      unsigned long neikey[27];
+      nei27(cell,neikey);
+      for(int inei=0;inei<27;inei++){
+	struct CELL *lcell;
+	if(inei==13) continue; //skip central cell
+	lcell=getcell(neikey+inei,level,cpu);
+	if((lcell!=NULL)&&(lcell->marked==0)){
+	  lcell->marked=marker;
+	  nm++;
+      	}
+      }
+    }
+    cell++;
+  }
+
+  printf("%d/%ld NEI marked  on level %d\n",nm,nidx,level);
+}
+
+
+//=====================================================
+void create_cell(unsigned int level, struct CPU *cpu, struct PARAM *param){
+
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+  unsigned long nidx=cpu->ncell[level];
+  unsigned long idx;
+
+  for(idx=0;idx<nidx;idx++){
+
+    // let's create new cells
+    if((cell->marked)&&(!cell->child)){
+      cell->child=1; // the current cell has a child
+
+      unsigned long icell;
+      for(icell=0;icell<8;icell++){
+	struct CELL *newcell=&cpu->grid[cpu->ncelltotal];
+	newcell->key=(cell->key<<3)|icell;
+	newcell->child=0;
+	newcell->marked=0;
+
+	// Straight injection
+	newcell->gdata.d=cell->gdata.d;
+	newcell->gdata.p=cell->gdata.p; // for testing purpose
+
+	
+	// global update
+	cpu->ncell[level+1]++;
+	cpu->ncelltotal++;
+      }
+    }
+    cell++;
+  }
+}
+
+//===================================================================================
+
+void destroy_cell(unsigned int level, struct CPU *cpu, struct PARAM *param){
+
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+  unsigned long nidx=cpu->ncell[level];
+  unsigned long idx;
+  unsigned long KEYMAX=0;
+  KEYMAX=~(KEYMAX&0);
+
+  for(idx=0;idx<nidx;idx++){
+
+    // let's destroy cells
+    if((cell->marked==0)&&(cell->child)){
+      cell->child=0; // the current cell has no child
+
+      unsigned long icell;
+      for(icell=0;icell<8;icell++){
+	unsigned long key;
+	struct CELL *newcell=&cpu->grid[cpu->ncelltotal];
+	key=(cell->key<<3)|icell;
+	newcell=getcell(&key,level+1,cpu);
+	memset(newcell,0,sizeof(struct CELL));
+
+	newcell->key=KEYMAX;
+	
+	// global update
+	cpu->ncell[level+1]--;
+	cpu->ncelltotal--;
+      }
+    }
+    cell++;
+  }
+}

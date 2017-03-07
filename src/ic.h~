@@ -1,0 +1,1 @@
+void read_grafic_part(struct CPU *cpu, REAL *munit, REAL *ainit, int *npart, struct PARAM *param,int level);

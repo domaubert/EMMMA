@@ -1,0 +1,148 @@
+
+#ifdef SINGLEPRECISION
+// SINGLE PRECISION CASE
+
+typedef float REAL;
+#ifdef WMPI
+#define MPI_REEL MPI_FLOAT
+#endif
+
+#define POW(A,B) powf(A,B)
+#define SQRT(A) sqrtf(A)
+#define EXP(A) expf(A)
+#define FMIN(A,B) fminf(A,B)
+#define FMAX(A,B) fmaxf(A,B)
+#define FABS(A) fabsf(A)
+#define CUDPP_REAL CUDPP_FLOAT
+
+#else
+// DOUBLE PRECISION CASE (BY DEFAULT)
+
+typedef double REAL;
+#ifdef WMPI
+#define MPI_REEL MPI_DOUBLE
+#endif
+
+#define POW(A,B) pow(A,B)
+#define SQRT(A) sqrt(A)
+#define EXP(A) exp(A)
+#define FMIN(A,B) fmin(A,B)
+#define FMAX(A,B) fmax(A,B)
+#define FABS(A) fabs(A)
+#define CUDPP_REAL CUDPP_DOUBLE
+
+#endif // SINGLEPRECISION
+
+// ===================================
+
+
+struct COSMOPARAM{
+  REAL aexp;
+  REAL om;
+  REAL ov;
+  REAL ob;
+  REAL H0;
+  REAL *tab_aexp;
+  REAL *tab_ttilde;
+  REAL tsim;
+  REAL unit_l;
+  REAL tphy;
+};
+
+
+#define OUTPUTPARAM_n_field_max (50)
+struct OUTPUTPARAM{
+  int n_field;
+  int n_field_tot;
+
+  char *field_name[OUTPUTPARAM_n_field_max];
+  int field_id[OUTPUTPARAM_n_field_max];
+
+  int field_state_grid[OUTPUTPARAM_n_field_max];
+  int field_state_stat[OUTPUTPARAM_n_field_max];
+  int field_state_movie[OUTPUTPARAM_n_field_max];
+
+  int n_field_movie;
+
+};
+
+
+struct GDATA{
+  REAL d;
+  REAL p;
+  REAL pnew;
+  REAL res;
+  REAL f[3];
+};
+
+
+struct PART{
+  unsigned long key;
+  unsigned long newkey;
+  unsigned long idx;
+  unsigned int level;
+  unsigned int is;
+  REAL x[3];
+  REAL v[3];
+  REAL mass;
+  
+};
+
+struct CELL{
+  unsigned long key;
+  unsigned int rank;
+  struct GDATA gdata;
+  REAL x,y,z; // FOR testing purpose only // Should not be used
+#ifdef PIC
+  REAL cicdens;
+#endif
+
+  char marked;
+  char child;
+
+};
+
+struct CPU{
+  struct CELL *grid;
+  unsigned long *firstcell;
+  unsigned long *ncell;
+  unsigned long ncelltotal;
+
+
+#ifdef PIC
+  struct PART *part;
+  unsigned long *firstpart;
+  unsigned long *npart;
+  unsigned long nparttotal;
+  
+  unsigned int ndumps;
+  unsigned int rank;
+};
+#endif
+
+struct PARAM{
+  unsigned int lmax;
+  unsigned int lcoarse;
+  unsigned int ngridmax;
+  unsigned int npartmax;
+  unsigned int nsmooth;
+
+
+  unsigned int mgridlmin;
+  unsigned int niter;
+  unsigned int nrelax;
+  unsigned int nvcycles;
+  REAL poissonacc;
+
+  struct OUTPUTPARAM *out_grid;
+
+  char paramrunfile[256]; // contains the parameter file name used on command line
+
+  struct COSMOPARAM *cosmo; ///< the cosmological parameters
+
+  //struct PHYSICAL_STATE *physical_state;
+
+  REAL aexpdump; // the next expansion factor to be dumped
+
+
+};

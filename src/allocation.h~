@@ -1,0 +1,1 @@
+void allocation(struct CPU *cpu,struct PARAM *param);

@@ -1,0 +1,569 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <math.h>
+
+#include "prototypes.h"
+#include "morton.h"
+#include "constant.h"
+
+// =============================================
+
+REAL trilin_pot(unsigned long keyfine,struct CPU* cpu){
+  
+  unsigned long keyp=keyfine>>3; // get parent cell
+  unsigned int xc,yc,zc,levelc;
+  M2C(keyp,&xc,&yc,&zc,&levelc); // we have the coordinates of the parent cell
+
+  unsigned int xf,yf,zf,levelf;
+  M2C(keyfine,&xf,&yf,&zf,&levelf); // we have the coordinates of the fine cell
+
+
+  // displacements +weights
+  unsigned int dmax=(1<<levelc)-1; //boxsize at coarse level
+
+  int i[]={0,-1, 0, 0,-1,-1, 0,-1};
+  int j[]={0, 0,-1, 0,-1, 0,-1,-1};
+  int k[]={0, 0, 0,-1, 0,-1,-1,-1};
+  REAL w[8]={0.421875,0.140625,0.140625,0.140625,0.046875,0.046875,0.046875,0.015625};
+  int p;
+  int ix,iy,iz;
+  ix= ((keyfine & (1 << 0)) != 0)*2;
+  iy= ((keyfine & (1 << 1)) != 0)*2;
+  iz= ((keyfine & (1 << 2)) != 0)*2;
+
+  for(p=0;p<8;p++){
+    i[p]=(i[p]==0?i[p]:(i[p]+ix))+xc;
+    j[p]=(j[p]==0?j[p]:(j[p]+iy))+yc;
+    k[p]=(k[p]==0?k[p]:(k[p]+iz))+zc;
+  }
+
+  // Periodic boundary conditions
+  for(p=0;p<8;p++){
+    i[p]=(i[p]<0?dmax:i[p]);
+    j[p]=(j[p]<0?dmax:j[p]);
+    k[p]=(k[p]<0?dmax:k[p]);
+  }
+
+  for(p=0;p<8;p++){
+    i[p]=(i[p]>dmax?0:i[p]);
+    j[p]=(j[p]>dmax?0:j[p]);
+    k[p]=(k[p]>dmax?0:k[p]);
+  }
+
+  // displacements are ready;
+
+  unsigned long key;
+  REAL data=0.;
+  
+  for(p=0;p<8;p++){
+    struct CELL *lcell;
+    LC2M(&key,i[p],j[p],k[p],levelc);
+    lcell=getcell(&key,levelc,cpu);
+    data+=lcell->gdata.p*w[p];
+  }
+
+  // put interpolated data back
+
+  return data;  
+}
+
+
+//============================================================================
+//int nread=PoissonJacobi_single(level,cpu,dxcur,(iter==0),factdens);
+int PoissonJacobi_single(int level, struct CPU *cpu, REAL dx, int flag, REAL factdens){
+
+  // flag=1 means the residual contains the norm of the density
+  // flag=0 means the resiual contains the actual residual of the Poisson Equation
+
+  int ival=0;
+
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+  unsigned long nidx=cpu->ncell[level];
+  unsigned long idx;
+  //  printf("level=%d nidx=%d\n",nidx);
+
+  for(idx=0;idx<nidx;idx++){
+    //printf("idx=%d\n", idx);
+    if(cell->rank==cpu->rank){
+      REAL temp;
+      REAL res;
+      unsigned long neikey[6];
+      nei6(cell, neikey);
+
+      temp=0.;
+      res=0.;
+
+      
+      for(int inei=0;inei<6;inei++){
+	struct CELL *lcell;
+	REAL data;
+	lcell=getcell(neikey+inei,level,cpu);
+	if(lcell==NULL){
+	  // fine/coarse border cell
+	  data=trilin_pot(neikey[inei],cpu);
+	}
+	else{
+	  data=lcell->gdata.p;
+	}
+
+ 	temp+=data;
+      }
+
+      // setting up the residual
+      res=temp;
+
+      // we finish the laplacian
+      temp=temp/6.0;
+      temp=temp-dx*dx*cell->gdata.d/6.0*factdens;
+      
+      // we finsih the residual
+      res=res-6.0*cell->gdata.p;
+      res=res/(dx*dx)-factdens*cell->gdata.d;
+
+      // we store the new value of the potential
+      cell->gdata.pnew=temp;
+
+      // we store the local residual
+      if(flag) {
+	cell->gdata.res=factdens*cell->gdata.d;
+     }
+      else{
+	cell->gdata.res=res;
+      }
+     
+      ival++;
+    }
+    cell++;
+  }
+
+  return ival;
+}
+
+//============================================================================
+REAL comp_residual(int level, struct CPU *cpu, int flag){
+
+  // flag=1 means the residual contains the norm of the density
+  // flag=0 means the resiual contains the actual residual of the Poisson Equation
+
+  REAL residual=0.;
+  REAL rloc;
+
+
+  if(flag){
+    struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+    unsigned long nidx=cpu->ncell[level];
+    unsigned long idx;
+    
+    for(idx=0;idx<nidx;idx++){
+      if(cell->rank==cpu->rank){
+	rloc=POW(cell->gdata.res,2);
+	residual+=rloc;
+      }
+      cell++;
+    }
+  }
+  else{
+    struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+    unsigned long nidx=cpu->ncell[level];
+    unsigned long idx;
+    
+    for(idx=0;idx<nidx;idx++){
+      if(cell->rank==cpu->rank){
+	rloc=POW(cell->gdata.res,2);
+	residual+=rloc;
+      }
+      cell++;
+    }
+  }
+
+  return residual;
+}
+
+//==========================================
+
+void update_pot_in_tree(int level,struct CPU *cpu, struct PARAM *param, REAL *distout, REAL *normpout){
+  REAL dist=0.;
+  REAL normp=0.;
+  REAL pnew,pold;
+
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+  unsigned long nidx=cpu->ncell[level];
+  unsigned long idx;
+  
+  for(idx=0;idx<nidx;idx++){
+    if(cell->rank==cpu->rank){
+      pnew=cell->gdata.pnew;
+      pold=cell->gdata.p;
+      dist+=POW(pold-pnew,2);
+      normp+=POW(pold,2);
+      cell->gdata.p=pnew;
+    }
+    cell++;
+  }
+
+  *normpout=normp;
+  *distout=dist;
+}
+
+
+//==========================================
+
+REAL PoissonJacobi(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
+{
+  REAL dxcur;
+  int iter;
+  int nread;
+  REAL fnorm,residual=0,dres;
+  int nitmax;
+  REAL factdens;
+  REAL rloc;
+  REAL res0=0.;
+  REAL dist,normp,dresconv;
+  int crit;
+
+  // Computing the factor of the density
+  if(level>=param->lcoarse){
+#ifndef TESTCOSMO
+    factdens=4.0*M_PI;
+#else
+    factdens=6.0;
+#endif
+  }
+  else{
+    factdens=1.;
+  }
+
+  // Computing the max number for iteration
+
+  if((level==param->mgridlmin)||(level>param->lcoarse)){
+    nitmax=param->niter;
+  }
+  else{
+    nitmax=param->nrelax;
+  }
+
+  dxcur=1./(1<<level);
+
+
+  for(iter=0;iter<nitmax;iter++){
+    //printf("iter=%d\n",iter);
+    // --------------- some inits for iterative solver
+    if(iter==0){
+	fnorm=0.;
+	residual=0.;
+	nread=0;
+    }
+    else{
+      residual=0.;
+    }
+    
+    // - Smoothing Operation
+    int nread=PoissonJacobi_single(level,cpu,dxcur,(iter==0),factdens);
+    
+    // - Residual calculation
+    rloc=comp_residual(level,cpu,(iter==0));
+
+    //printf("rloc=%e\n",rloc);
+    // keeping track of norms
+    if(iter==0){
+      fnorm+=rloc;
+    }
+    else{
+      residual+=rloc;
+    }
+    
+    // update in tree
+    dist=0;
+    normp=0.;
+    if(nread) update_pot_in_tree(level,cpu,param,&dist,&normp);
+    
+#ifdef WMPI
+    if((iter<=param->niter)||(iter%1==0)){
+      mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,(iter==0),level); // potential field exchange
+      if(iter==0){
+	MPI_Allreduce(MPI_IN_PLACE,&fnorm,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD);
+      }
+      else{
+	MPI_Allreduce(MPI_IN_PLACE,&residual,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD);
+	MPI_Allreduce(MPI_IN_PLACE,&dist,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD);
+	MPI_Allreduce(MPI_IN_PLACE,&normp,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD);
+      }
+    }
+#endif
+    
+    if((iter==1)&&(level>=param->lcoarse)) res0=residual; // to keep track of convergence progress
+    
+    // Checking convergence
+    if(iter>0){
+      
+      // here we test the convergence of the temporary solution
+      dresconv=SQRT(dist/normp);
+      
+      // here we test the zero level of Poisson equation
+      if(level<param->lcoarse){
+	dres=SQRT(residual);
+      }
+      else{
+	dres=SQRT(residual/fnorm);
+      }
+      
+      // we take the smallest
+      crit=(dres<dresconv?0:1);
+      dres=(dres<dresconv?dres:dresconv);
+      
+      if(isnan(dres)){
+	printf("residual= %e dist=%e normp=%e fnorm=%e srt=%e srtconv=%e\n",residual,dist,normp,fnorm,SQRT(residual/fnorm),SQRT(dist/normp));
+	abort();
+      }
+      if((dres)<param->poissonacc){
+	if(level>=param->lcoarse) break;
+      }
+    }
+    
+  } // END LOOP ITER
+  
+  
+  
+  if(level>param->lcoarse){
+    if(cpu->rank==RANK_DISP) printf("CPU | level=%d iter=%d res=%e fnorm=%e\n",level,iter,dres,fnorm);
+  }
+  else{
+    if(cpu->rank==RANK_DISP) printf("CPU | level=%d iter=%d res=%e fnorm=%e resraw=%e res0=%e crit=%d\n",level,iter,dres,fnorm,SQRT(residual),SQRT(res0),crit);
+  }
+  return dres;
+}
+
+// =====================================================================
+
+void Reduction(int level, struct PARAM *param, struct CPU *cpu){
+
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level-1]]);
+  unsigned long nidx=cpu->ncell[level-1];
+  unsigned long idx;
+  
+  for(idx=0;idx<nidx;idx++){
+    unsigned long icell;
+    unsigned long root=cell->key<<3; // root key for all the childs
+    cell->gdata.d=0.;
+    cell->gdata.p=0.;
+    for(icell=0;icell<8;icell++){
+      unsigned long key=(root|icell); //key for a child
+      struct CELL *lcell;
+      lcell=getcell(&key,level,cpu);
+      cell->gdata.d+=0.125*lcell->gdata.res;
+    }
+    cell++;
+  }
+}
+
+REAL get_pot(struct CELL *cell){
+  return cell->gdata.p;
+}
+
+void put_pot(struct CELL *cell,REAL data){
+  cell->gdata.p=data;
+}
+
+
+// =====================================================================
+
+void ProlongationCor(int level, struct PARAM *param, struct CPU *cpu){
+
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+  unsigned long nidx=cpu->ncell[level];
+  unsigned long idx;
+  
+  for(idx=0;idx<nidx;idx++){
+    REAL propot=trilin_pot(cell->key,cpu);
+    cell->gdata.p-=propot;
+    cell++;
+  }
+}
+
+// =====================================================================
+void Prolongation(int level, struct PARAM *param, struct CPU *cpu){
+
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+  unsigned long nidx=cpu->ncell[level];
+  unsigned long idx;
+  
+  for(idx=0;idx<nidx;idx++){
+    REAL propot=trilin_pot(cell->key,cpu);
+    cell->gdata.p=propot;
+    cell++;
+  }
+}
+
+
+// =====================================================================
+// =====================================================================
+
+REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
+{
+  REAL dres;
+  // pre-relaxation
+
+#ifdef WMPI
+  mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,(level==param->lcoarse),level); // potential field exchange
+#endif
+
+#ifndef GPUAXL
+  dres=PoissonJacobi(level,param,cpu,tsim);
+#else
+  dres=PoissonJacobi(level,param,cpu,tsim);
+#endif
+
+
+
+  //==========================
+  Reduction(level,param,cpu);
+
+/* #ifndef ONFLYRED */
+/*   // NOTE ON GPU the calculation is performed on the fly */
+/*   // reduction */
+/*   nextoct=firstoct[level-1]; */
+/*   if(nextoct!=NULL){ */
+/*     do{ */
+/*       curoct=nextoct; */
+/*       nextoct=curoct->next; */
+/*       curoct->parent->gdata.d=0.; */
+/*       curoct->parent->gdata.p=0.; */
+/*       for(icell=0;icell<8;icell++){ */
+/* 	curoct->parent->gdata.d+=curoct->cell[icell].res*0.125; // we average the residual and store it as the new density */
+/*       } */
+/*     }while(nextoct!=NULL); */
+/*   } */
+/* #endif */
+
+  // full relaxation at coarsest level or recursive call to mgrid
+
+  if((level-1)==param->mgridlmin){
+#ifdef WMPI
+    mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,0,level-1); // potential field exchange
+#endif
+
+#ifndef GPUAXL
+    PoissonJacobi(level-1,param,cpu,tsim);
+#else
+    PoissonJacobi(level-1,param,cpu,tsim);
+#endif
+  }
+  else{
+    PoissonMgrid(level-1,param,cpu,tsim);
+  }
+
+  //==========================
+
+/*   // prolongation + correction */
+
+  ProlongationCor(level,param,cpu);
+
+/*   nextoct=firstoct[level-1]; */
+/*   if(nextoct!=NULL){ */
+/*     do // sweeping level */
+/*       { */
+/* 	curoct=nextoct; */
+/* 	nextoct=curoct->next; */
+
+/* 	curcell=curoct->parent; */
+/* 	coarse2fine_gravlin(curcell,Wi); */
+/* 	for(icell=0;icell<8;icell++) // looping over cells in oct */
+/* 	  { */
+/* 	    curoct->cell[icell].gdata.p-=Wi[icell].p; // we propagate the error and correct the evaluation */
+/* 	  } */
+/*       }while(nextoct!=NULL); */
+/*   } */
+
+  // post relaxation
+#ifdef WMPI
+  mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,0,level); // potential field exchange
+#endif
+
+#ifndef GPUAXL
+  dres=PoissonJacobi(level,param,cpu,tsim);
+#else
+  dres=PoissonJacobi(level,param,cpu,tsim);
+#endif
+  return dres;
+}
+
+
+
+// =================================================================================================================
+
+int PoissonSolver(int level,struct PARAM *param, struct CPU *cpu, REAL aexp){
+
+  int igrid;
+  REAL res;
+  double t[10]={0,0,0,0,0,0,0,0,0,0};
+
+#ifdef WMPI
+  MPI_Barrier(cpu->comm);
+  t[0]=MPI_Wtime();
+#endif
+
+  if(cpu->rank==RANK_DISP) printf("Start Poisson Solver ");
+
+#ifndef GPUAXL
+  if(cpu->rank==RANK_DISP)  printf("on CPU\n");
+#else
+  if(cpu->rank==RANK_DISP)  printf("on CPU\n");
+#endif
+  //breakmpi();
+
+  if((level==param->lcoarse)&&(param->lcoarse!=param->mgridlmin)){ 
+    for(igrid=0;igrid<param->nvcycles;igrid++){ // V-Cycles 
+      if(cpu->rank==RANK_DISP) printf("----------------------------------------\n"); 
+      res=PoissonMgrid(level,param,cpu,aexp); 
+      if(res<param->poissonacc) break; 
+    } 
+  } 
+  else{ 
+  PoissonJacobi(level,param,cpu,aexp);
+  }
+
+  //once done we propagate the solution to level+1
+
+  Prolongation(level+1,param,cpu);
+
+/* #if 0 */
+/*   struct Gtype Wi[8]; */
+/*   struct CELL* curcell; */
+/*   int icell2; */
+/*   struct OCT* curoct; */
+/*   struct OCT* nextoct; */
+/*   int icell; */
+/*   int iOct; */
+/*   for(iOct=0; iOct<cpu->locNoct[level-1]; iOct++){ */
+/*     struct OCT *curoct=cpu->octList[level-1][iOct]; */
+
+/*     for(icell=0;icell<8;icell++){ // looping over cells in oct */
+/*       curcell=&(curoct->cell[icell]); */
+/*       if(curcell->child!=NULL){ */
+
+/*         coarse2fine_gravlin(curcell,Wi); */
+/*         for(icell2=0;icell2<8;icell2++){ */
+/* 	  //		Wi[icell2].p=0.; */
+/* 	  memcpy(&(curcell->child->cell[icell2].gdata.p),&(Wi[icell2].p),sizeof(REAL)); */
+/* 	  //memcpy(&(curcell->child->cell[icell2].gdata.p),&(curcell->gdata.p),sizeof(REAL)); */
+/*         } */
+/*       } */
+/*     } */
+/*   } */
+/* #endif */
+
+#ifdef WMPI
+  MPI_Barrier(cpu->comm);
+  t[9]=MPI_Wtime();
+#endif
+
+ if(cpu->rank==RANK_DISP){
+#ifndef GPUAXL
+   printf("==== CPU POISSON TOTAL TIME =%e\n",t[9]-t[0]);
+#else
+   printf(" === CPU POISSON TOTAL TIME =%e\n",t[9]-t[0]);
+#endif
+ }
+  return 0;
+}

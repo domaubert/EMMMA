@@ -1,0 +1,110 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+#include "constant.h"
+#include "prototypes.h"
+#include "morton.h"
+
+// CIC Assign ===================================
+void part2cell(struct PART *part, struct CELL *cell, struct CPU *cpu, int level){
+  unsigned long neikey[27];
+  nei27(cell,neikey);
+  REAL dx=1./(1<<level);
+  for(int inei=0;inei<27;inei++){ // Brute force, we look for the 27 neighbors
+    struct CELL *lcell;
+    lcell=getcell(neikey+inei,level,cpu);
+    if(lcell){
+      unsigned int lloc;
+      REAL xc[3];
+      key2cen(neikey[inei],xc,&lloc);
+      
+      REAL w=1.;
+      int i;
+      for(i=0;i<3;i++){
+	REAL d=(part->x[i]-xc[i])/dx;
+	w*=(d>=1.?0.:(d<=-1.?0.:(d<0.?1.+d:1.-d)));
+      }
+      lcell->cicdens+=w*part->mass; 
+    }
+  }
+}
+
+//==========================================
+//==========================================
+
+void cic_child(struct CELL *cellorg, unsigned int levelorg, struct CELL *cellpart, unsigned int level, struct CPU *cpu){
+
+  // here cellorg is the cell that should be CIC assigned
+  // here cellpart is the mother cell that is being explored for particles in her leaves
+  // cellpart level is given by level
+
+  unsigned long icell;
+
+  for(icell=0;icell<8;icell++){
+    unsigned long newkey;
+    newkey=(cellpart->key<<3)|icell; // getting the daughter's key
+    struct CELL *newcell;
+    newcell=getcell(&newkey,level+1,cpu);
+
+    if(!newcell->child){
+      // it's a leaf lets look for particles
+
+      // === PARTICLE STREAM
+      struct PART *p=NULL;
+      p=getpart(&(newcell->key),level+1,cpu); // returns the first part of the cell
+      if(p!=NULL){
+	part2cell(p,cellorg,cpu,levelorg);
+	while(p<(cpu->part+cpu->nparttotal-1)){
+	  p++;
+	  if(p->key!=newcell->key){
+	    break; // end of current cell particle stream
+	  }
+	  else{
+	    part2cell(p,cellorg,cpu,levelorg);
+	  }
+	}
+      }
+      // === END PARTICLE STREAM
+    }
+    else{
+      cic_child(cellorg,levelorg,newcell,level+1,cpu);
+    }
+  }
+}
+
+//=============================================================
+void cic(unsigned int level, struct CPU *cpu, struct PARAM *param){
+  
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+  unsigned long nidx=cpu->ncell[level];
+  unsigned long idx;
+
+  for(idx=0;idx<nidx;idx++){
+    // FIRST THE EASY CASE : contribution to level L cells
+    if(cell->child){
+      // the cell is split let's look down
+      cic_child(cell,level,cell,level,cpu);
+    }
+    else{
+      struct PART *p=NULL;
+      p=getpart(&(cell->key),level,cpu); // returns the first part of the cell
+      if(p!=NULL){
+	part2cell(p,cell,cpu,level);
+	while(p<(cpu->part+cpu->nparttotal-1)){
+	  p++;
+	  if(p->key!=cell->key){
+	    break; // end of current cell particle stream
+	  }
+	  else{
+	    part2cell(p,cell,cpu,level);
+	  }
+	}
+      }
+    }
+    cell++;
+  }
+}
+
+
+

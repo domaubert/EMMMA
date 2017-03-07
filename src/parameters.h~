@@ -1,0 +1,1 @@
+void GetParameters(char *fparam, struct PARAM *param);

@@ -1,0 +1,62 @@
+##==MemoryManagement=========
+max_number_of_octs 100000
+max_number_of_part 800000
+mpi_buffer_size 50000
+##==TimestepManagement=======
+output_frequency 100
+dt_dump 0
+max_nuber_of_steps 150000
+time_step_max  1e0
+tmax_or_amax 0.15
+##==AMRGrid==================
+level_coarse 6
+level_max 6
+amr_thresh 8
+n_smooth 2
+##==DM=======================
+dm_res 0
+dx_res 500.
+##==PoissonSolver============
+max_number_of_relaxation_poisson 1000
+poisson_accuracy 1e-5
+mgrid_lmin 4
+mgrid_nvcycles 3
+mgrid_nsmooth 5
+##==Restart==================
+restart_snap 0
+##==ThreadManagement======
+grav_stencil_size 16
+cons_stencil_size 16
+max_subcycles 2
+nthread 16
+nstream 1
+ompthreads 1
+##==RadTransfert============
+clight 1e-1
+dens_threshold 5e20
+temp_threshold 1e5
+src_int 0.4544e17
+fesc 1.
+atomic_file SB99_equiv_mono_TH.dat
+##==StarFormation============
+overdensity_cond 50
+density_cond 500
+efficiency 0.004
+tlife_rad 3e6
+mass_res 1
+##==SuperNovae===============
+feedback_eff 1.
+feedback_kin_frac 1.
+feedback_mass_return 0.526
+feddback_egy 9.736e11
+feedback_tlife 1.766e7
+feedback_wind 0.05
+##==Movie====================
+lmap 9
+mode avg
+xmin 0
+xmax 1
+ymin 0
+ymax 1
+zmin 0
+zmax 1
