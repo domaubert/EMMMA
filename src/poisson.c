@@ -376,7 +376,7 @@ void ProlongationCor(int level, struct PARAM *param, struct CPU *cpu){
   
   for(idx=0;idx<nidx;idx++){
     REAL propot=trilin_pot(cell->key,cpu);
-    cell->gdata.p-=propot;
+    cell->gdata.p=cell->gdata.p-propot;
     cell++;
   }
 }
@@ -577,18 +577,18 @@ void FillDens(unsigned int level, struct CPU *cpu, struct PARAM *param){
     REAL locdens=0.;
 #ifdef PIC
     locdens+=cell->cicdens;
+    //printf("%e\n",locdens);
 #endif
 
 #ifdef WHYDRO2
     locdens+=cell->field.d;
 #endif
-
+    
     // WARNING HERE ASSUME PERIODIC BOUNDARY CONDITIONS AND REMOVE THE AVG DENSITY
+    cell->gdata.d=locdens;
     cell->gdata.d-=1.;
     cell++;
   }
-
-
 }
 // ====================================================================================
 // ====================================================================================

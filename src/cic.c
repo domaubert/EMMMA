@@ -310,6 +310,7 @@ void L_movepart(unsigned int level, struct CPU *cpu, struct PARAM *param, REAL* 
 	    p->x[ic]+=p->v[ic]*dt;
 	    disp+=p->v[ic]*dt*p->v[ic]*dt;
 	  }
+
 	  if(disp>mdisp) mdisp=disp;
 	}
 	

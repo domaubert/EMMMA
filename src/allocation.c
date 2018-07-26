@@ -106,16 +106,18 @@ void build_init_grid(struct CPU *cpu,struct PARAM *param){
 	  cpu->grid[idx].x=i*dx;
 	  cpu->grid[idx].y=j*dx;
 	  cpu->grid[idx].z=k*dx;
-	  
+
+	  cpu->grid[idx].gdata.d=0.;
+	  cpu->grid[idx].gdata.p=0.;
+
+#if 0 // TO GENERATE CENTRAL BLOP
 	  if((level==param->lcoarse)&&(POW(cpu->grid[idx].x+0.5*dx-0.5,2)+POW(cpu->grid[idx].y+0.5*dx-0.5,2)+POW(cpu->grid[idx].z+0.5*dx-0.5,2)<POW(0.2,2))){
 	    cpu->grid[idx].gdata.d=1.;
 	    cpu->grid[idx].gdata.p=1.;
 	  }
 	  else{
-	    cpu->grid[idx].gdata.d=0.;
-	    cpu->grid[idx].gdata.p=0.;
 	  }
-
+#endif
 	  nlev++;
 	  idx++;
 	}

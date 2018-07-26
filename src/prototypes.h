@@ -182,6 +182,11 @@ struct PHYSICAL_STATE{
 };
 
 
+struct RUN{
+  int nstepstart;
+  REAL aexpdump;
+};
+
 
 
 struct PARAM{
@@ -228,10 +233,9 @@ struct PARAM{
   char paramrunfile[256]; // contains the parameter file name used on command line
 
   struct COSMOPARAM *cosmo; ///< the cosmological parameters
+  struct RUN *run;// current run parameters
 
   struct PHYSICAL_STATE *physical_state;
-
-  REAL aexpdump; // the next expansion factor to be dumped
 
   struct UNITS unit; ///< contains the units
   struct SCALE scale; ///< contains the scaling factor for units convertion (function of aexp)

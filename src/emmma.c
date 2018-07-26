@@ -27,6 +27,8 @@ int main(int argc, char *argv[]){
   // ================= ZE DATA
   struct CPU cpu;
   struct PARAM param;
+  struct RUN run;
+  param.run=&run;
 
   // ================= COSMO TABS
   double tab_aexp[NCOSMOTAB];
@@ -35,7 +37,6 @@ int main(int argc, char *argv[]){
   REAL amax;
   struct COSMOPARAM cosmo;
   param.cosmo=&cosmo;
-
   // ================= OUTPUTS MANAGEMENT
   struct OUTPUTPARAM out_grid;
   param.out_grid=&out_grid;
@@ -89,13 +90,13 @@ int main(int argc, char *argv[]){
   strcat(outputlist,".list_aexp");
   FILE *foutputs;
 
-  param.aexpdump=0;
+  run.aexpdump=0;
   float tempa;
   if((foutputs=fopen(outputlist,"r"))!=NULL){
     int dump = fscanf(foutputs,"%e",&tempa);
-    param.aexpdump=tempa;
+    run.aexpdump=tempa;
     if(cpu.rank==RANK_DISP){
-      printf("Reading outputs from %s : first dump at aexp=%e\n",outputlist,param.aexpdump);
+      printf("Reading outputs from %s : first dump at aexp=%e\n",outputlist,run.aexpdump);
     }
   }
   else{
@@ -145,10 +146,13 @@ int main(int argc, char *argv[]){
   REAL munit;
   REAL ainit,tinit,tsim;
   unsigned long npart;
+  int nstepstart;
 
   if(param.nrestart==0){
     if(cpu.rank==RANK_DISP) printf("==> starting part\n");
-    
+
+    nstepstart=0;
+
 #ifdef SPLIT
     read_split_grafic_part(&cpu, &munit, &ainit, &npart, &param, param.lcoarse);
     
@@ -203,19 +207,19 @@ int main(int argc, char *argv[]){
 
 
     // prepare the next in aexplist
-    if(param.aexpdump){
-      while(param.aexpdump<=tsim){
+    if(run.aexpdump){
+      while(run.aexpdump<=tsim){
 	  if(fscanf(foutputs,"%e",&tempa)==EOF){
-	    param.aexpdump=0;
+	    run.aexpdump=0;
 	    break;
 	  }
 	  else{
-	    param.aexpdump=tempa;
+	    run.aexpdump=tempa;
 	  }
       }
     }
     if(cpu.rank==RANK_DISP){
-      printf("Next dump in the list at aexp=%e\n",param.aexpdump);
+      printf("Next dump in the list at aexp=%e\n",run.aexpdump);
     }
 
     // temporal boundaries of the full run
@@ -273,51 +277,86 @@ int main(int argc, char *argv[]){
   //
   //================================================================================
 
-  // CIC
-  cic(param.lcoarse,&cpu,&param);
-  dumpalloct_serial("./data/",1.0,&param, &cpu,param.lmax);
+  /*  // CIC */
+  /* cic(param.lcoarse,&cpu,&param); */
+  
 
-#if 0 // Balise
+
+  /* // POISSON SOLVER */
+  /* FillDens(param.lcoarse,&cpu,&param); */
+  /* PoissonSolver(param.lcoarse,&param,&cpu,1.0); */
+  
+  
+  /* //DUMP */
+  /* dumpalloct_serial("./data/",1.0,&param, &cpu,param.lmax); */
+  
+
+
+#if 1 // Balise
 
 
     //==================================== MAIN LOOP ================================================
     //===============================================================================================
     // Loop over time
-    for(nsteps=nstepstart;(nsteps<=param.nsteps)*(tsim<tmax);nsteps++){
 
-      cpu.nsteps=nsteps;
-      cosmo.aexp=interp_aexp(tsim,(double *)cosmo.tab_aexp,(double *)cosmo.tab_ttilde);
-      cosmo.tsim=tsim;
-      if(cpu.rank==RANK_DISP) printf("\n============== STEP %d aexp=%e z=%lf tconf=%e tmax=%e================\n",nsteps,cosmo.aexp,1./cosmo.aexp-1.,tsim,tmax);
+  int nsteps;
+  for(nsteps=nstepstart;(nsteps<=param.nsteps)*(tsim<tmax);nsteps++){
+
+    //cpu.nsteps=nsteps;
+    cosmo.aexp=interp_aexp(tsim,(double *)cosmo.tab_aexp,(double *)cosmo.tab_ttilde);
+    cosmo.tsim=tsim;
+    if(cpu.rank==RANK_DISP) printf("\n============== STEP %d aexp=%e z=%lf tconf=%e tmax=%e================\n",nsteps,cosmo.aexp,1./cosmo.aexp-1.,tsim,tmax);
 
 
       // Resetting the timesteps
 
-      for(level=0;level<=levelmax;level++){
+      for(level=0;level<=param.lmax;level++){
 	ndt[level]=0;
       }
 
 
       // Recursive Call
-      Advance_level(param.lcoarse,adt,&cpu,&param,ndt,nsteps,tsim);
+      //Advance_level(param.lcoarse,adt,&cpu,&param,ndt,nsteps,tsim);
 
+      // CIC
+      cic(param.lcoarse,&cpu,&param);
+
+      // POISSON SOLVER
+      FillDens(param.lcoarse,&cpu,&param);
+      PoissonSolver(param.lcoarse,&param,&cpu,1.0);
+      PoissonForce(param.lcoarse,&cpu,&param,1.0);
+
+
+      // MOVING PARTICLES
+      int is=0;
+      L_accelpart(param.lcoarse,&cpu,&param,adt,is);
+      L_movepart(param.lcoarse,&cpu,&param,adt,is);
+      reorgpart(&cpu,&param);
+
+
+      //DUMP
+      dumpalloct_serial("./data/",1.0,&param, &cpu,param.lmax);
+
+
+
+#if 0
       // ==================================== dump
       cond1 = nsteps%param.ndumps==0;
       cond2 = 0;
       cond3 = tsim+adt[levelcoarse-1]>=tmax;
       cond4 = 0;
 
-      if(param.aexpdump){
+      if(run.aexpdump){
 	// dumpfile at specific outputs
-	cond4=cosmo.aexp>param.aexpdump;
+	cond4=cosmo.aexp>run.aexpdump;
 	if(cond4){
 	  if(fscanf(foutputs,"%e",&tempa)==EOF){
-	    param.aexpdump=0;
+	    run.aexpdump=0;
 	  }
 	  else{
-	    param.aexpdump=tempa;
+	    run.aexpdump=tempa;
 	    if(cpu.rank==RANK_DISP){
-	      printf("next output aexp=%e\n",param.aexpdump);
+	      printf("next output aexp=%e\n",run.aexpdump);
 	    }
 	  }
 	}
@@ -353,15 +392,18 @@ int main(int argc, char *argv[]){
       }
 
       dumpStepInfo(&param, &cpu,nsteps,adt[param.lcoarse],(float)tsim);
+#endif
 
       //==================================== timestep completed, looping
-      dt=adt[param.lcoarse];
+      REAL dt=adt[param.lcoarse];
       tsim+=dt;
 
 
     }// END main loop
 
     
+#if 0
+    // ========================================= DUMP LAST SNAP
     ndumps-=1;
     int fdump=FDUMP;
     if(cpu.nproc>fdump){
@@ -379,7 +421,8 @@ int main(int argc, char *argv[]){
     else{
       dumpIO(tsim,&param,&cpu,adt,1);
     }
-
+    // ===========================================END  DUMP LAST SNAP
+#endif
 
 #endif // BALISE COMPIL
 
