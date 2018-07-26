@@ -7,6 +7,79 @@
 #include "morton.h"
 #include "constant.h"
 
+// =========================================================
+float assign_part_field(int field,struct PART *curp){
+
+/**
+  * return the appropriate particle field, depending of a given ID.
+  */
+
+  float res=0;
+  switch(field){
+  case 0:
+    res=(float)curp->x[0];
+    break;
+  case 1:
+    res=(float)curp->x[1];
+    break;
+  case 2:
+    res=(float)curp->x[2];
+    break;
+
+  case 3:
+    res=(float)curp->v[0];
+    break;
+  case 4:
+    res=(float)curp->v[1];
+    break;
+  case 5:
+    res=(float)curp->v[2];
+    break;
+
+  /* case 6: */
+  /*   res=(float)curp->fx; */
+  /*   break; */
+  /* case 7: */
+  /*   res=(float)curp->fy; */
+  /*   break; */
+  /* case 8: */
+  /*   res=(float)curp->fz; */
+  /*   break; */
+    
+  case 9:
+    res=(float)(curp->idx);
+    break;
+    
+#ifdef STARS
+  case 10:
+    res=(float)(curp->isStar);
+    break;
+#endif // STARS
+    
+  /* case 11: */
+  /*   res=(float)(curp->epot); */
+  /*   break; */
+  /* case 12: */
+  /*   res=(float)(curp->ekin); */
+  /*   break; */
+    
+  case 13:
+    res=(float)(curp->mass);
+    break;
+    
+#ifdef STARS
+    
+  case 14:
+    if(curp->isStar) {
+      res=(float)(curp->age);
+    }
+    break;
+#endif // STARS
+  }
+  return res;
+}
+
+// =========================================================
 float assign_grid_field(int field,struct CELL *cell){
 
 /**
@@ -195,9 +268,11 @@ void dumpalloct_serial(char folder[],REAL tsim, struct PARAM *param, struct CPU 
 
   for(i=0;i<param->out_grid->n_field_tot;i++){
     if(param->out_grid->field_id[i]){
-
       char folder_field[128];
-      sprintf(folder_field,"%sgrid_%s/",folder, param->out_grid->field_name[i]);
+      sprintf(folder_field,"%s/%05d",folder, cpu->ndumps);
+      mkdir(folder_field, 0755);
+
+      sprintf(folder_field,"%s/%05d/grid_%s/",folder, cpu->ndumps,param->out_grid->field_name[i]);
       mkdir(folder_field, 0755);
       char dat_name[256];
       sprintf(dat_name,"%s%s.%05d.p%05d",folder_field,param->out_grid->field_name[i],cpu->ndumps,cpu->rank);
@@ -244,7 +319,7 @@ void dumpalloct_serial(char folder[],REAL tsim, struct PARAM *param, struct CPU 
 	int ii=0;
 	for (i =0;i<param->out_grid->n_field_tot; i++){
 	  
-	  if(param->out_grid->field_id[i]){
+	  if(param->out_part->field_id[i]){
 	    float dat;
 	    if(i==0){
 	      dat=x[0];
@@ -266,9 +341,6 @@ void dumpalloct_serial(char folder[],REAL tsim, struct PARAM *param, struct CPU 
 
 	  }
 	}
-	
-
-
 	
 	// update file boundaries
 	if(x[0]<xmin) xmin=x[0];
@@ -306,4 +378,252 @@ void dumpalloct_serial(char folder[],REAL tsim, struct PARAM *param, struct CPU 
   }
 
   free(f_dat);
+}
+
+//void dumpalloct_serial(char folder[],REAL tsim, struct PARAM *param, struct CPU *cpu, int ldump){
+
+void dumppart_serial(char folder[],REAL tsim, struct PARAM *param, struct CPU *cpu, int ldump){
+  //(struct RUNPARAMS *param, struct OCT **firstoct,char filename[], int levelcoarse, int levelmax, REAL tsim, struct CPUINFO *cpu){
+
+  const int debug =0;
+
+  FILE *fp = NULL;
+  int ipart=0;
+  unsigned int level;
+  float tsimf=tsim;
+
+  int npart=0;
+  int first=-1;
+  int n_cell=0;
+
+  float part_xmin=2;
+  float part_xmax=-1;
+  float part_ymin=2;
+  float part_ymax=-1;
+  float part_zmin=2;
+  float part_zmax=-1;
+
+#ifdef STARS
+  int nstar=0;
+  float star_xmin=2;
+  float star_xmax=-1;
+  float star_ymin=2;
+  float star_ymax=-1;
+  float star_zmin=2;
+  float star_zmax=-1;
+#endif
+
+  FILE **f_part=(FILE **)malloc(param->out_part->n_field*sizeof(FILE *));
+
+#ifdef STARS
+  FILE **f_star=(FILE **)malloc(param->out_part->n_field*sizeof(FILE *));
+#endif // STARS
+
+
+  int n_field=0;
+  int i;
+  for(i=0;i<param->out_part->n_field_tot;i++){
+    if(param->out_part->field_id[i]){
+
+      if(first==-1) first=i; // looking for the first non nil field
+
+#ifdef STARS
+      char filenamestar[128];
+      char folder_field_star[128];
+      sprintf(folder_field_star,"%s/%05d/star_%s/",folder,cpu->ndumps,param->out_part->field_name[i]);
+      mkdir(folder_field_star, 0755);
+      sprintf(filenamestar,"%s%s.%05d.p%05d",folder_field_star,param->out_part->field_name[i],cpu->ndumps,cpu->rank);
+
+
+      if(debug) printf("openning %s at %p\n",filenamestar, f_star[n_field]);
+      f_star[n_field]=fopen(filenamestar,"wb");
+      if(f_star[n_field] == NULL) {
+        printf("Cannot open %s\n", filenamestar);
+        abort();
+      }
+      fwrite(&nstar,1,sizeof(int)  ,f_star[n_field]);
+      fwrite(&tsimf,1,sizeof(float),f_star[n_field]);
+      fwrite(&star_xmin,sizeof(float),1,f_star[n_field]);
+      fwrite(&star_xmax,sizeof(float),1,f_star[n_field]);
+      fwrite(&star_ymin,sizeof(float),1,f_star[n_field]);
+      fwrite(&star_ymax,sizeof(float),1,f_star[n_field]);
+      fwrite(&star_zmin,sizeof(float),1,f_star[n_field]);
+      fwrite(&star_zmax,sizeof(float),1,f_star[n_field]);
+#endif
+
+      char filenamepart[128];
+      char folder_field_part[128];
+      sprintf(folder_field_part,"%s/%05d/part_%s/",folder,cpu->ndumps,param->out_part->field_name[i]);
+      mkdir(folder_field_part, 0755);
+      sprintf(filenamepart,"%s%s.%05d.p%05d",folder_field_part,param->out_part->field_name[i],cpu->ndumps,cpu->rank);
+
+      if(debug) printf("openning %s at %p\n",filenamepart,f_part[n_field]);
+      f_part[n_field]=fopen(filenamepart,"wb");
+      if(f_part[n_field] == NULL){
+        printf("Cannot open %s\n", filenamepart);
+        abort();
+      }
+
+      fwrite(&npart,1,sizeof(int)  ,f_part[n_field]);
+      fwrite(&tsimf,1,sizeof(float),f_part[n_field]);
+      fwrite(&part_xmin,sizeof(float),1,f_part[n_field]);
+      fwrite(&part_xmax,sizeof(float),1,f_part[n_field]);
+      fwrite(&part_ymin,sizeof(float),1,f_part[n_field]);
+      fwrite(&part_ymax,sizeof(float),1,f_part[n_field]);
+      fwrite(&part_zmin,sizeof(float),1,f_part[n_field]);
+      fwrite(&part_zmax,sizeof(float),1,f_part[n_field]);
+
+      n_field++;
+    }
+  }
+
+  if(debug) printf("opening file OK\n");
+
+
+  // writing the data
+  for(level=param->lcoarse;level<=ldump;level++){
+    double dx=POW(0.5,level); // oct size
+
+    struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+    unsigned long nidx=cpu->ncell[level];
+    unsigned long idx;
+
+    for(idx=0;idx<nidx;idx++){
+
+      if((cell->child==0)||(level==ldump)){
+	n_cell++;
+
+	struct PART *p=NULL;
+	p=getpart(&(cell->key),level,cpu); // returns the first part of the cell
+	if(p!=NULL){
+	  ipart++;
+	  // ========================================================
+	  int ii=0;
+	  for (i=0;i<param->out_part->n_field_tot; i++){
+	    if(param->out_part->field_id[i]){
+
+	      //    if(debug) printf("field_id=%d\n",param->out_part->field_id[i]);
+
+#ifdef STARS
+	      if(p->isStar) 	{	
+		fp=f_star[ii];	if(i==first) nstar++;	
+	      }
+	      else{	
+		fp=f_part[ii];	if(i==first) npart++;	
+	      }
+#else
+	      fp=f_part[ii];	if(i==first) npart++;	
+#endif
+
+	      float dat = (float)assign_part_field(i,p);
+	      fwrite(&dat,sizeof(float),1,fp);
+	      ii++;
+	    }
+	  }
+	  // ========================================================
+
+	  
+	  while(p<(cpu->part+cpu->nparttotal-1)){
+	    ipart++;
+	    p++;
+	    if(p->key!=cell->key){
+	      break; // end of current cell particle stream
+	    }
+	    else{
+	      
+	      // ========================================================
+	      int ii=0;
+	      for (i=0;i<param->out_part->n_field_tot; i++){
+		if(param->out_part->field_id[i]){
+		  
+		  //    if(debug) printf("field_id=%d\n",param->out_part->field_id[i]);
+		  
+#ifdef STARS
+		  if(p->isStar) 	{	
+		    fp=f_star[ii];	if(i==first) nstar++;	
+		  }
+		  else{	
+		    fp=f_part[ii];	if(i==first) npart++;	
+		  }
+#else
+		    fp=f_part[ii];	if(i==first) npart++;	
+#endif		  
+		  float dat = (float)assign_part_field(i,p);
+		  fwrite(&dat,sizeof(float),1,fp);
+		  ii++;
+		}
+	      }
+	      // ========================================================
+	    }
+	  }
+	}
+	
+	REAL x[3];
+	key2pos(cell->key,x,&level);
+
+	// update file boundaries
+#ifdef STARS
+	if(x[0]<star_xmin) star_xmin=x[0];
+	if(x[1]<star_ymin) star_ymin=x[1];
+	if(x[2]<star_zmin) star_zmin=x[2];
+	
+	if(x[0]+dx>star_xmax) star_xmax=x[0]+dx;
+	if(x[1]+dx>star_ymax) star_ymax=x[1]+dx;
+	if(x[2]+dx>star_zmax) star_zmax=x[2]+dx;
+#endif
+
+	if(x[0]<part_xmin) part_xmin=x[0];
+	if(x[1]<part_ymin) part_ymin=x[1];
+	if(x[2]<part_zmin) part_zmin=x[2];
+	
+	if(x[0]+dx>part_xmax) part_xmax=x[0]+dx;
+	if(x[1]+dx>part_ymax) part_ymax=x[1]+dx;
+	if(x[2]+dx>part_zmax) part_zmax=x[2]+dx;
+
+      }
+
+      cell++;
+    }
+  }
+
+  if (debug) printf("writing OK\n");
+
+  n_field=0;
+  for(i=0;i<param->out_part->n_field_tot;i++){
+    if(param->out_part->field_id[i]){
+
+      rewind(f_part[n_field]);
+      fwrite(&npart,1,sizeof(int)  ,f_part[n_field]);
+      fwrite(&tsimf,1,sizeof(float),f_part[n_field]);
+      fwrite(&part_xmin,sizeof(float),1,f_part[n_field]);
+      fwrite(&part_xmax,sizeof(float),1,f_part[n_field]);
+      fwrite(&part_ymin,sizeof(float),1,f_part[n_field]);
+      fwrite(&part_ymax,sizeof(float),1,f_part[n_field]);
+      fwrite(&part_zmin,sizeof(float),1,f_part[n_field]);
+      fwrite(&part_zmax,sizeof(float),1,f_part[n_field]);
+      fclose(f_part[n_field]);
+
+#ifdef STARS
+      rewind(f_star[n_field]);
+      fwrite(&nstar,1,sizeof(int)  ,f_star[n_field]);
+      fwrite(&tsimf,1,sizeof(float),f_star[n_field]);
+      fwrite(&star_xmin,sizeof(float),1,f_star[n_field]);
+      fwrite(&star_xmax,sizeof(float),1,f_star[n_field]);
+      fwrite(&star_ymin,sizeof(float),1,f_star[n_field]);
+      fwrite(&star_ymax,sizeof(float),1,f_star[n_field]);
+      fwrite(&star_zmin,sizeof(float),1,f_star[n_field]);
+      fwrite(&star_zmax,sizeof(float),1,f_star[n_field]);
+      fclose(f_star[n_field]);
+#endif
+      n_field++;
+    }
+  }
+
+  if (debug) printf("closing  OK\n");
+  //printf("wrote %d particles (%d expected) in %s\n",ipart,npart,filename);
+
+  free(f_part);
+#ifdef STARS
+  free(f_star);
+#endif
 }

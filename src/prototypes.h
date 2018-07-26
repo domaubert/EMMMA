@@ -138,12 +138,12 @@ struct CPU{
   unsigned long *firstpart;
   unsigned long *npart;
   unsigned long nparttotal;
+#endif
   
   unsigned int ndumps;
   unsigned int rank;
   unsigned int nproc;
 };
-#endif
 
 struct FIELD_INFO{
   double min;

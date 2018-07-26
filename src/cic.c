@@ -286,8 +286,75 @@ void L_accelpart(unsigned int level, struct CPU *cpu, struct PARAM *param, REAL*
   }
 }
 
-// =======================================================================================
-// =======================================================================================
+//==========================================================================
+//==========================================================================
+//==========================================================================
+
+REAL L_comptstep(unsigned int level, struct CPU *cpu, struct PARAM *param){
+  
+  struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
+  unsigned long nidx=cpu->ncell[level];
+  unsigned long idx;
+  int ic;
+  REAL va;
+  REAL dtnew=1e9;
+  REAL dxcur=1./(1<<level);
+  REAL dtlev;
+
+  for(idx=0;idx<nidx;idx++){
+    // FIRST THE EASY CASE : contribution to level L cells
+    if(!cell->child){
+      struct PART *p=NULL;
+      p=getpart(&(cell->key),level,cpu); // returns the first part of the cell
+      if(p!=NULL){
+	
+	// === do stuff
+	va=0.;
+	for(ic=0;ic<3;ic++){
+	  va+=p->v[ic]*p->v[ic];
+	}
+	
+	if(va>0){
+	  dtlev=(FRACDX*dxcur)/SQRT(va);
+	}
+	else{
+	  dtlev=1e9;
+	}
+
+	if(dtnew>dtlev) dtnew=dtlev;
+	// === END do stuff
+
+
+	while(p<(cpu->part+cpu->nparttotal-1)){
+	  p++;
+	  if(p->key!=cell->key){
+	    break; // end of current cell particle stream
+	  }
+	  else{
+	    // === do stuff
+	    va=0.;
+	    for(ic=0;ic<3;ic++){
+	      va+=p->v[ic]*p->v[ic];
+	    }
+	    
+	    if(va>0){
+	      dtlev=(FRACDX*dxcur)/SQRT(va);
+	    }
+	    else{
+	      dtlev=1e9;
+	    }
+	    
+	    if(dtnew>dtlev) dtnew=dtlev;
+	    // === END do stuff
+	  }
+	}
+      }
+    }
+    cell++;
+  }
+  return dtnew;
+}
+
 
 void L_movepart(unsigned int level, struct CPU *cpu, struct PARAM *param, REAL* adt, int is){
   
@@ -297,9 +364,11 @@ void L_movepart(unsigned int level, struct CPU *cpu, struct PARAM *param, REAL* 
   REAL dt=adt[level];
   int ic;
   REAL mdisp=0.,disp;
+  REAL dxcur=1./(1<<level);
 
   for(idx=0;idx<nidx;idx++){
     // FIRST THE EASY CASE : contribution to level L cells
+    unsigned long key;
     if(!cell->child){
       struct PART *p=NULL;
       p=getpart(&(cell->key),level,cpu); // returns the first part of the cell
@@ -309,7 +378,18 @@ void L_movepart(unsigned int level, struct CPU *cpu, struct PARAM *param, REAL* 
 	  for(ic=0;ic<3;ic++){
 	    p->x[ic]+=p->v[ic]*dt;
 	    disp+=p->v[ic]*dt*p->v[ic]*dt;
+
+	    // PERIODIC BOUNDARY CONDITIONS
+	    p->x[ic]+=(p->x[ic]<0?1.0:(p->x[ic]>=1.?-1.:0));
+	    if(p->x[ic]==1.0) p->x[ic]=0.;
 	  }
+
+	  // New Key
+	  p->newkey=pos2key(p->x,&level);
+	  if(p->newkey>524288){
+	    printf("%f %f %f \n",p->x[0],p->x[1],p->x[2]);
+	  }
+	  
 
 	  if(disp>mdisp) mdisp=disp;
 	}
@@ -325,7 +405,18 @@ void L_movepart(unsigned int level, struct CPU *cpu, struct PARAM *param, REAL* 
 	      for(ic=0;ic<3;ic++){
 		p->x[ic]+=p->v[ic]*dt;
 		disp+=p->v[ic]*dt*p->v[ic]*dt;
+
+		// PERIODIC BOUNDARY CONDITIONS
+		p->x[ic]+=(p->x[ic]<0?1.0:(p->x[ic]>=1.?-1.0:0));
+		if(p->x[ic]==1.0) p->x[ic]=0.;
 	      }
+
+	      // New Key
+	      p->newkey=pos2key(p->x,&level);
+	      if(p->newkey>524288){
+		printf("%f %f %f \n",p->x[0],p->x[1],p->x[2]);
+	      }
+	      
 	      if(disp>mdisp) mdisp=disp;
 	    }
 	  }
@@ -334,7 +425,6 @@ void L_movepart(unsigned int level, struct CPU *cpu, struct PARAM *param, REAL* 
     }
     cell++;
   }
-  REAL dxcur=1./(1<<level);
 
   REAL mmdisp;
 #ifdef WMPI
@@ -344,7 +434,7 @@ void L_movepart(unsigned int level, struct CPU *cpu, struct PARAM *param, REAL* 
   mmdisp=mdisp;
 #endif
 
-  if(cpu->rank==RANK_DISP) printf("level=%d maxdisp=%e or %e dx\n",level,mmdisp,mmdisp/dxcur);
+  if(cpu->rank==RANK_DISP) printf("level=%d maxdisp=%e or %e dx\n",level,SQRT(mmdisp),SQRT(mmdisp)/dxcur);
 
 }
 

@@ -16,6 +16,7 @@
 #include "parameters.h"
 #include "ic.h"
 #include "friedmann.h"
+#include "advance.h"
 
 #define LEVCOARSE 5
 #define LEVMAX 6
@@ -132,6 +133,11 @@ int main(int argc, char *argv[]){
   REAL *adt;
   adt=(REAL *)malloc(sizeof(REAL)*(param.lmax+1));
   for(level=0;level<=param.lmax;level++) adt[level]=param.dt;
+
+  REAL *aaexp;
+  aaexp=(REAL *)malloc(sizeof(REAL)*(param.lmax+1));
+  REAL *atime;
+  atime=(REAL *)malloc(sizeof(REAL)*(param.lmax+1));
 
 #ifdef COARSERAD
   REAL *adt_rad;
@@ -256,7 +262,7 @@ int main(int argc, char *argv[]){
   cosmo.tab_ttilde=(REAL *)tab_ttilde;
   
   param.time_max=tmax;
-
+  printf("tmax=%e\n",tmax);
   mkdir("data/", 0755);
   //if(cpu.rank==RANK_DISP) dumpHeader(&param,&cpu,argv[1]);
 
@@ -267,7 +273,7 @@ int main(int argc, char *argv[]){
   if( param.mgridlmin>0 && param.mgridlmin < Lmin ){
     param.mgridlmin = Lmin;
     if(cpu.rank==RANK_DISP){
-      printf("Conflict between mgridlmin and ncpu : mgridlmin set to %d\n",param.mgridlmin );
+      printf("Conflict between mgridlmin and ncpu : mgridlmin set to %d\n",param.mgridlmin);
     }
   }
 
@@ -303,40 +309,65 @@ int main(int argc, char *argv[]){
   for(nsteps=nstepstart;(nsteps<=param.nsteps)*(tsim<tmax);nsteps++){
 
     //cpu.nsteps=nsteps;
-    cosmo.aexp=interp_aexp(tsim,(double *)cosmo.tab_aexp,(double *)cosmo.tab_ttilde);
+    aexp=interp_aexp(tsim,(double *)cosmo.tab_aexp,(double *)cosmo.tab_ttilde);
+    cosmo.aexp=aexp;
     cosmo.tsim=tsim;
     if(cpu.rank==RANK_DISP) printf("\n============== STEP %d aexp=%e z=%lf tconf=%e tmax=%e================\n",nsteps,cosmo.aexp,1./cosmo.aexp-1.,tsim,tmax);
 
 
       // Resetting the timesteps
-
+    
       for(level=0;level<=param.lmax;level++){
 	ndt[level]=0;
+	aaexp[level]=aexp;
+	atime[level]=tsim;
       }
 
 
-      // Recursive Call
+      // ---------------  Recursive Call
+      level=param.lcoarse;
       //Advance_level(param.lcoarse,adt,&cpu,&param,ndt,nsteps,tsim);
 
-      // CIC
-      cic(param.lcoarse,&cpu,&param);
 
-      // POISSON SOLVER
-      FillDens(param.lcoarse,&cpu,&param);
-      PoissonSolver(param.lcoarse,&param,&cpu,1.0);
-      PoissonForce(param.lcoarse,&cpu,&param,1.0);
+      // COMPUTING TIMESTEPS ======================================
+      REAL dtnew;
+      dtnew=param.dt;
+
+      REAL dtpic;
+      dtpic=L_comptstep(level,&cpu,&param);
+      printf("dtpic=%e dtnew=%e\n",dtpic,dtnew);
+      dtnew=(dtpic<dtnew?dtpic:dtnew);
+      adt[level]=dtnew;
+      
+      // CIC ======================================================
+      cic(level,&cpu,&param);
+
+      // POISSON SOLVER ==========================================
+      FillDens(level,&cpu,&param);
+      PoissonSolver(level,&param,&cpu,aaexp[level]);
+      PoissonForce(level,&cpu,&param,aaexp[level]);
 
 
-      // MOVING PARTICLES
+      
+      // MOVING PARTICLES ========================================
       int is=0;
-      L_accelpart(param.lcoarse,&cpu,&param,adt,is);
-      L_movepart(param.lcoarse,&cpu,&param,adt,is);
-      reorgpart(&cpu,&param);
+      L_accelpart(level,&cpu,&param,adt,is);
+      L_movepart(level,&cpu,&param,adt,is);
+      update_key_part(level,&cpu,&param);  //update particles key
+      reorgpart(&cpu,&param); // we sort them again
 
 
-      //DUMP
-      dumpalloct_serial("./data/",1.0,&param, &cpu,param.lmax);
+      //==================================== timestep completed
+      REAL dt=adt[param.lcoarse];
+      tsim+=dt;
+      
 
+      //=================     
+      REAL aexpdump=interp_aexp(tsim,(double *)cosmo.tab_aexp,(double *)cosmo.tab_ttilde);
+      if(nsteps%10==0){
+	dumpalloct_serial("./data/",aexpdump,&param, &cpu,param.lmax);
+	dumppart_serial("./data/",aexpdump,&param, &cpu,param.lmax);
+      }
 
 
 #if 0
@@ -394,9 +425,6 @@ int main(int argc, char *argv[]){
       dumpStepInfo(&param, &cpu,nsteps,adt[param.lcoarse],(float)tsim);
 #endif
 
-      //==================================== timestep completed, looping
-      REAL dt=adt[param.lcoarse];
-      tsim+=dt;
 
 
     }// END main loop
@@ -543,7 +571,7 @@ int main(){
   reorg(&cpu,&param); //reorganising the grid
 
 #ifdef PIC
-  update_key_part(level,&cpu,&param);  //update particles key
+  amr_update_key_part(level,&cpu,&param);  //update particles key
   reorgpart(&cpu,&param);
 #endif
 

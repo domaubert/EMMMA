@@ -419,23 +419,6 @@ REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
   //==========================
   Reduction(level,param,cpu);
 
-/* #ifndef ONFLYRED */
-/*   // NOTE ON GPU the calculation is performed on the fly */
-/*   // reduction */
-/*   nextoct=firstoct[level-1]; */
-/*   if(nextoct!=NULL){ */
-/*     do{ */
-/*       curoct=nextoct; */
-/*       nextoct=curoct->next; */
-/*       curoct->parent->gdata.d=0.; */
-/*       curoct->parent->gdata.p=0.; */
-/*       for(icell=0;icell<8;icell++){ */
-/* 	curoct->parent->gdata.d+=curoct->cell[icell].res*0.125; // we average the residual and store it as the new density */
-/*       } */
-/*     }while(nextoct!=NULL); */
-/*   } */
-/* #endif */
-
   // full relaxation at coarsest level or recursive call to mgrid
 
   if((level-1)==param->mgridlmin){
@@ -459,22 +442,6 @@ REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
 
   ProlongationCor(level,param,cpu);
 
-/*   nextoct=firstoct[level-1]; */
-/*   if(nextoct!=NULL){ */
-/*     do // sweeping level */
-/*       { */
-/* 	curoct=nextoct; */
-/* 	nextoct=curoct->next; */
-
-/* 	curcell=curoct->parent; */
-/* 	coarse2fine_gravlin(curcell,Wi); */
-/* 	for(icell=0;icell<8;icell++) // looping over cells in oct */
-/* 	  { */
-/* 	    curoct->cell[icell].gdata.p-=Wi[icell].p; // we propagate the error and correct the evaluation */
-/* 	  } */
-/*       }while(nextoct!=NULL); */
-/*   } */
-
   // post relaxation
 #ifdef WMPI
   mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,0,level); // potential field exchange
@@ -487,7 +454,6 @@ REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
 #endif
   return dres;
 }
-
 
 
 // =================================================================================================================
@@ -527,31 +493,6 @@ int PoissonSolver(int level,struct PARAM *param, struct CPU *cpu, REAL aexp){
 
   Prolongation(level+1,param,cpu);
 
-/* #if 0 */
-/*   struct Gtype Wi[8]; */
-/*   struct CELL* curcell; */
-/*   int icell2; */
-/*   struct OCT* curoct; */
-/*   struct OCT* nextoct; */
-/*   int icell; */
-/*   int iOct; */
-/*   for(iOct=0; iOct<cpu->locNoct[level-1]; iOct++){ */
-/*     struct OCT *curoct=cpu->octList[level-1][iOct]; */
-
-/*     for(icell=0;icell<8;icell++){ // looping over cells in oct */
-/*       curcell=&(curoct->cell[icell]); */
-/*       if(curcell->child!=NULL){ */
-
-/*         coarse2fine_gravlin(curcell,Wi); */
-/*         for(icell2=0;icell2<8;icell2++){ */
-/* 	  //		Wi[icell2].p=0.; */
-/* 	  memcpy(&(curcell->child->cell[icell2].gdata.p),&(Wi[icell2].p),sizeof(REAL)); */
-/* 	  //memcpy(&(curcell->child->cell[icell2].gdata.p),&(curcell->gdata.p),sizeof(REAL)); */
-/*         } */
-/*       } */
-/*     } */
-/*   } */
-/* #endif */
 
 #ifdef WMPI
   MPI_Barrier(cpu->comm);

@@ -155,6 +155,7 @@ void key2pos(unsigned long key, REAL *x, unsigned int *level){
   x[2]=(zi)*dx;
 }
 
+//============================================================
 void key2cen(unsigned long key, REAL *x, unsigned int *level){
   unsigned int xi;
   unsigned int yi;
@@ -168,6 +169,19 @@ void key2cen(unsigned long key, REAL *x, unsigned int *level){
   x[1]=(yi+0.5)*dx;
   x[2]=(zi+0.5)*dx;
 }
+//============================================================
+unsigned long pos2key(REAL *pos, unsigned int *level){
+  unsigned long key;
+  REAL dxcur=1./(1<<(*level));
+
+  unsigned int x=(unsigned int)(pos[0]/dxcur);
+  unsigned int y=(unsigned int)(pos[1]/dxcur);
+  unsigned int z=(unsigned int)(pos[2]/dxcur);
+  LC2M(&key,x,y,z,*level);
+
+  return key;
+}
+
 
 
 
@@ -238,7 +252,7 @@ struct PART * getpart(unsigned long *key,int level,struct CPU *cpu){
 //====================================================================================
 //====================================================================================
 
-void update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *param)
+void amr_update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *param)
 {
   // post refinement/derefinement key regularisation
 
@@ -264,6 +278,57 @@ void update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *param)
 
   printf("adding %d part to level %d and removing %d part from level %d\n",nplp1,level+1,nplm1,level-1);
 }
+
+
+void update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *param)
+{
+  // post refinement/derefinement key regularisation
+
+  struct PART *part=&(cpu->part[cpu->firstpart[level]]);
+  unsigned long nidx=cpu->npart[level];
+  int nplp1=0;
+  int nplm1=0;
+  int idx;
+  unsigned long kmax=0;
+  unsigned long kmin=1e9;
+  for(idx=0;idx<nidx;idx++){
+
+    if(part->key!=part->newkey){
+      // we should check if the cell with newkey exists !
+      struct CELL *lcell;
+      lcell=getcell(&part->newkey,level,cpu);
+      if(lcell==NULL){
+	// we should go LOWRES because it does not exist
+	part->newkey=pos2key(part->x,level-1);
+      }
+      else{
+	// we should check if its refined
+	unsigned long newkey;
+	newkey=(part->key<<3); // getting the daughter's key (cell 0)
+	struct CELL *newcell;
+	newcell=getcell(&newkey,level+1,cpu);
+	if(newcell){
+	  // it exists it's refined, let's compute the key again
+	  part->newkey=pos2key(part->x,level+1);
+	}
+      }
+
+      part->key=part->newkey;
+      
+
+    }
+
+    if(part->key>kmax) kmax=part->key;
+    if(part->key<kmin) kmin=part->key;
+    part++;
+  }
+
+  printf("kmin=%d kmax=%d\n",kmin,kmax);
+  if((kmin<262144)||(kmax>2*262144)) {
+    abort();
+  }
+}
+
 #endif
 
 

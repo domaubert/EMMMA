@@ -15,4 +15,6 @@ void nei27(struct CELL *cell, unsigned long neikey[]);
 
 void reorgpart(struct CPU *cpu, struct PARAM *param);
 struct PART * getpart(unsigned long *key,int level,struct CPU *cpu);
+void amr_update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *param);
+unsigned long pos2key(REAL *pos, unsigned int *level);
 void update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *param);

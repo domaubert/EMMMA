@@ -59,9 +59,8 @@ class Rawpart:
         self.npart=[]
         self.data=[]
 
-        
+#=========
 class Part:
-    def load(self,directory,isnap,star=False):
         repsnap=directory+'{:05d}/'.format(isnap)
         if(star):
             repx=repsnap+'star_x'
@@ -81,6 +80,7 @@ class Part:
         raw=Rawpart()
         npart=0
         for icpu in range(ncpu):
+           
             fname=repx+'/x.{:05d}.p{:05d}'.format(isnap,icpu)
             f=open(fname,"rb")
             npartloc=np.fromfile(f,dtype=np.int32,count=1)[0]
