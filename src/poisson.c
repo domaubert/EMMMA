@@ -209,7 +209,7 @@ void update_pot_in_tree(int level,struct CPU *cpu, struct PARAM *param, REAL *di
 
 //==========================================
 
-REAL PoissonJacobi(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
+REAL PoissonJacobi(int level,struct PARAM *param, struct CPU *cpu)
 {
   REAL dxcur;
   int iter;
@@ -399,7 +399,7 @@ void Prolongation(int level, struct PARAM *param, struct CPU *cpu){
 // =====================================================================
 // =====================================================================
 
-REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
+REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu)
 {
   REAL dres;
   // pre-relaxation
@@ -409,9 +409,9 @@ REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
 #endif
 
 #ifndef GPUAXL
-  dres=PoissonJacobi(level,param,cpu,tsim);
+  dres=PoissonJacobi(level,param,cpu);
 #else
-  dres=PoissonJacobi(level,param,cpu,tsim);
+  dres=PoissonJacobi(level,param,cpu);
 #endif
 
 
@@ -427,13 +427,13 @@ REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
 #endif
 
 #ifndef GPUAXL
-    PoissonJacobi(level-1,param,cpu,tsim);
+    PoissonJacobi(level-1,param,cpu);
 #else
-    PoissonJacobi(level-1,param,cpu,tsim);
+    PoissonJacobi(level-1,param,cpu);
 #endif
   }
   else{
-    PoissonMgrid(level-1,param,cpu,tsim);
+    PoissonMgrid(level-1,param,cpu);
   }
 
   //==========================
@@ -448,9 +448,9 @@ REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
 #endif
 
 #ifndef GPUAXL
-  dres=PoissonJacobi(level,param,cpu,tsim);
+  dres=PoissonJacobi(level,param,cpu);
 #else
-  dres=PoissonJacobi(level,param,cpu,tsim);
+  dres=PoissonJacobi(level,param,cpu);
 #endif
   return dres;
 }
@@ -458,7 +458,7 @@ REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu, REAL tsim)
 
 // =================================================================================================================
 
-int PoissonSolver(int level,struct PARAM *param, struct CPU *cpu, REAL aexp){
+int PoissonSolver(int level,struct PARAM *param, struct CPU *cpu){
 
   int igrid;
   REAL res;
@@ -481,12 +481,12 @@ int PoissonSolver(int level,struct PARAM *param, struct CPU *cpu, REAL aexp){
   if((level==param->lcoarse)&&(param->lcoarse!=param->mgridlmin)){ 
     for(igrid=0;igrid<param->nvcycles;igrid++){ // V-Cycles 
       if(cpu->rank==RANK_DISP) printf("----------------------------------------\n"); 
-      res=PoissonMgrid(level,param,cpu,aexp); 
+      res=PoissonMgrid(level,param,cpu); 
       if(res<param->poissonacc) break; 
     } 
   } 
   else{ 
-  PoissonJacobi(level,param,cpu,aexp);
+  PoissonJacobi(level,param,cpu);
   }
 
   //once done we propagate the solution to level+1
@@ -534,7 +534,7 @@ void FillDens(unsigned int level, struct CPU *cpu, struct PARAM *param){
 // ====================================================================================
 // ====================================================================================
 
-void PoissonForce(unsigned int level, struct CPU *cpu, struct PARAM *param, REAL tsim){
+void PoissonForce(unsigned int level, struct CPU *cpu, struct PARAM *param){
   struct CELL *cell=&(cpu->grid[cpu->firstcell[level]]);
   unsigned long nidx=cpu->ncell[level];
   unsigned long idx;
@@ -560,7 +560,7 @@ void PoissonForce(unsigned int level, struct CPU *cpu, struct PARAM *param, REAL
 	data=lcell->gdata.p;
       }
       
-      cell->gdata.f[inei>>1]+=0.5*tsim*data*(((inei&1)<<1)-1)/dx;
+      cell->gdata.f[inei>>1]+=0.5*cpu->aaexp[level]*data*(((inei&1)<<1)-1)/dx;
     }
     cell++;
   }

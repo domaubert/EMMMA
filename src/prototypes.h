@@ -116,14 +116,13 @@ struct CELL{
   unsigned long key;
   unsigned int rank;
   struct GDATA gdata;
-  REAL x,y,z; // FOR testing purpose only // Should not be used
 #ifdef PIC
   REAL cicdens;
 #endif
 
   char marked;
   char child;
-
+  char desflag; // for destruction
 };
 
 struct CPU{
@@ -143,6 +142,10 @@ struct CPU{
   unsigned int ndumps;
   unsigned int rank;
   unsigned int nproc;
+
+  REAL *adt; // array of dts (1 per level)
+  REAL *aaexp; // array of expansion factors (1 per level)
+  REAL *atime; // array of times (1 per level)
 };
 
 struct FIELD_INFO{

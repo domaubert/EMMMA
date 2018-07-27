@@ -31,6 +31,12 @@ void allocation(struct CPU *cpu,struct PARAM *param){
   cpu->npart=(unsigned long *)calloc(param->lmax+1,sizeof(unsigned long));
   cpu->nparttotal=0;
 #endif
+ {
+      unsigned long ktest;
+      ktest=2788426;
+      struct CELL *newcell=getcell(&ktest,7,cpu);
+      printf("allocktest= %p\n",newcell);
+    }
 
 }
 
@@ -103,9 +109,9 @@ void build_init_grid(struct CPU *cpu,struct PARAM *param){
 	  cpu->grid[idx].key=code;
 	  if(level<param->lcoarse) cpu->grid[idx].child=1;
 
-	  cpu->grid[idx].x=i*dx;
-	  cpu->grid[idx].y=j*dx;
-	  cpu->grid[idx].z=k*dx;
+	  /* cpu->grid[idx].x=i*dx; */
+	  /* cpu->grid[idx].y=j*dx; */
+	  /* cpu->grid[idx].z=k*dx; */
 
 	  cpu->grid[idx].gdata.d=0.;
 	  cpu->grid[idx].gdata.p=0.;

@@ -54,7 +54,7 @@ I_DIR += -I/usr/include/
 # Obj
 #===============================================================================
 
-C_OBJS= emmma.o allocation.o morton.o io.o amr.o poisson.o cic.o parameters.o ic.o friedmann.o advance.o
+C_OBJS= emmma.o allocation.o morton.o io.o amr.o poisson.o cic.o parameters.o ic.o friedmann.o advance.o particle.o
 
 CUDA_OBJS= \
 	interface.o \

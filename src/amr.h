@@ -4,3 +4,4 @@ void mark_child(unsigned int level, struct CPU *cpu, struct PARAM *param,int ism
 void mark_nei(unsigned int level, struct CPU *cpu, struct PARAM *param,int ismooth);
 void create_cell(unsigned int level, struct CPU *cpu, struct PARAM *param);
 void destroy_cell(unsigned int level, struct CPU *cpu, struct PARAM *param);
+void clean_mark(unsigned int level, struct CPU *cpu, struct PARAM *param);

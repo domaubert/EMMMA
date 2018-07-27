@@ -524,13 +524,12 @@ void dumppart_serial(char folder[],REAL tsim, struct PARAM *param, struct CPU *c
 
 	  
 	  while(p<(cpu->part+cpu->nparttotal-1)){
-	    ipart++;
 	    p++;
 	    if(p->key!=cell->key){
 	      break; // end of current cell particle stream
 	    }
 	    else{
-	      
+	      ipart++;
 	      // ========================================================
 	      int ii=0;
 	      for (i=0;i<param->out_part->n_field_tot; i++){
@@ -584,6 +583,7 @@ void dumppart_serial(char folder[],REAL tsim, struct PARAM *param, struct CPU *c
 
       cell++;
     }
+    printf("ipart=%d\n",ipart);
   }
 
   if (debug) printf("writing OK\n");
@@ -620,7 +620,7 @@ void dumppart_serial(char folder[],REAL tsim, struct PARAM *param, struct CPU *c
   }
 
   if (debug) printf("closing  OK\n");
-  //printf("wrote %d particles (%d expected) in %s\n",ipart,npart,filename);
+  printf("wrote %d particles (%d expected)\n",ipart,npart);
 
   free(f_part);
 #ifdef STARS

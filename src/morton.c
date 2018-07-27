@@ -170,14 +170,14 @@ void key2cen(unsigned long key, REAL *x, unsigned int *level){
   x[2]=(zi+0.5)*dx;
 }
 //============================================================
-unsigned long pos2key(REAL *pos, unsigned int *level){
+unsigned long pos2key(REAL *pos, unsigned int level){
   unsigned long key;
-  REAL dxcur=1./(1<<(*level));
+  REAL dxcur=1./(1<<(level));
 
   unsigned int x=(unsigned int)(pos[0]/dxcur);
   unsigned int y=(unsigned int)(pos[1]/dxcur);
   unsigned int z=(unsigned int)(pos[2]/dxcur);
-  LC2M(&key,x,y,z,*level);
+  LC2M(&key,x,y,z,level);
 
   return key;
 }
@@ -276,10 +276,11 @@ void amr_update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *para
   cpu->npart[level-1]-=nplm1;
   cpu->npart[level]=cpu->npart[level]+nplm1-nplp1;
 
-  printf("adding %d part to level %d and removing %d part from level %d\n",nplp1,level+1,nplm1,level-1);
+  printf("AMR SHUFFLE adding %d part to level %d and removing %d part from level %d\n",nplp1,level+1,nplm1,level-1);
 }
 
 
+//====================================================================================
 void update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *param)
 {
   // post refinement/derefinement key regularisation
@@ -289,8 +290,6 @@ void update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *param)
   int nplp1=0;
   int nplm1=0;
   int idx;
-  unsigned long kmax=0;
-  unsigned long kmin=1e9;
   for(idx=0;idx<nidx;idx++){
 
     if(part->key!=part->newkey){
@@ -300,16 +299,13 @@ void update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *param)
       if(lcell==NULL){
 	// we should go LOWRES because it does not exist
 	part->newkey=pos2key(part->x,level-1);
+	nplm1++;
       }
       else{
-	// we should check if its refined
-	unsigned long newkey;
-	newkey=(part->key<<3); // getting the daughter's key (cell 0)
-	struct CELL *newcell;
-	newcell=getcell(&newkey,level+1,cpu);
-	if(newcell){
+	if(lcell->child){
 	  // it exists it's refined, let's compute the key again
 	  part->newkey=pos2key(part->x,level+1);
+	  nplp1++;
 	}
       }
 
@@ -318,15 +314,16 @@ void update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *param)
 
     }
 
-    if(part->key>kmax) kmax=part->key;
-    if(part->key<kmin) kmin=part->key;
     part++;
   }
 
-  printf("kmin=%d kmax=%d\n",kmin,kmax);
-  if((kmin<262144)||(kmax>2*262144)) {
-    abort();
-  }
+  cpu->npart[level+1]+=nplp1;
+  cpu->npart[level-1]+=nplm1;
+  cpu->npart[level]=cpu->npart[level]-nplm1-nplp1;
+
+  printf("MOTION SHUFFLE adding %d part to level %d and adding %d part to level %d\n",nplp1,level+1,nplm1,level-1);
+
+
 }
 
 #endif
