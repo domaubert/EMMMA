@@ -216,7 +216,21 @@ void reorgpart(struct CPU *cpu, struct PARAM *param){
     unsigned long imax=cpu->nparttotal;
     unsigned long target;
     LC2M(&target,0,0,0,level);
-    cpu->firstpart[level]=floorkeypart(cpu->part,target,imin,imax);
+    unsigned long fp=floorkeypart(cpu->part,target,imin,imax);
+
+    cpu->firstpart[level]=fp;
+    
+    /* while((cpu->part[fp].key>=target)&&(fp>0)){  */
+    /*   fp--;  */
+    /* }  */
+
+    /* if(fp==0){ */
+    /*   cpu->firstpart[level]=0; */
+    /* } */
+    /* else{ */
+    /*   cpu->firstpart[level]=fp+1; */
+    /* } */
+      
   }
 #endif
 }
@@ -273,8 +287,8 @@ void amr_update_key_part(unsigned int level, struct CPU *cpu, struct PARAM *para
     part++;
   }
   cpu->npart[level+1]+=nplp1;
-  cpu->npart[level-1]-=nplm1;
-  cpu->npart[level]=cpu->npart[level]+nplm1-nplp1;
+  cpu->npart[level-1]+=nplm1;
+  cpu->npart[level]=cpu->npart[level]-(nplm1+nplp1);
 
   printf("AMR SHUFFLE adding %d part to level %d and removing %d part from level %d\n",nplp1,level+1,nplm1,level-1);
 }

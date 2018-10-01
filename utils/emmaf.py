@@ -61,6 +61,7 @@ class Rawpart:
 
 #=========
 class Part:
+    def load(self,directory,isnap,star=False):
         repsnap=directory+'{:05d}/'.format(isnap)
         if(star):
             repx=repsnap+'star_x'

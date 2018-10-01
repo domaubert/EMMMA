@@ -488,6 +488,7 @@ void dumppart_serial(char folder[],REAL tsim, struct PARAM *param, struct CPU *c
     unsigned long nidx=cpu->ncell[level];
     unsigned long idx;
 
+    printf("going for nidx=%ld\n",nidx);
     for(idx=0;idx<nidx;idx++){
 
       if((cell->child==0)||(level==ldump)){
@@ -583,7 +584,7 @@ void dumppart_serial(char folder[],REAL tsim, struct PARAM *param, struct CPU *c
 
       cell++;
     }
-    printf("ipart=%d\n",ipart);
+    printf("ipart=%d, ncell=%d\n",ipart,n_cell);
   }
 
   if (debug) printf("writing OK\n");

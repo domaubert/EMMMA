@@ -49,15 +49,15 @@ REAL Advance_level(unsigned int level, struct CPU *cpu, struct PARAM *param){
     // REFINE/DESTROY ===========================================
     if((level<param->lmax)&&(param->lmax!=param->lcoarse)) {
       //if(is==0){ // we only refine when entering the level
-      	destroy_cell(level,cpu,param);
-	reorg(cpu,param); //reorganising the grid
-	
-	create_cell(level,cpu,param);
-	reorg(cpu,param); //reorganising the grid
-
-	amr_update_key_part(level,cpu,param);  //update particles key
-	reorgpart(cpu,param); // reorganising the grid
-	//}
+      destroy_cell(level,cpu,param);
+      reorg(cpu,param); //reorganising the grid 
+      
+      create_cell(level,cpu,param);
+      reorg(cpu,param); //reorganising the grid
+      
+      amr_update_key_part(level,cpu,param);  //update particles key
+      reorgpart(cpu,param); // reorganising the grid
+      //}
     }
 
     
@@ -155,7 +155,12 @@ REAL Advance_level(unsigned int level, struct CPU *cpu, struct PARAM *param){
     ncelltotal=0.;
     for(ll=param->lcoarse;ll<=param->lmax;ll++){
       if(cpu->npart[ll]==0) continue;
-      printf("ll=%d FP=%lu key=%lu npart=%lu ncell=%lu\n",ll,cpu->firstpart[ll],cpu->part[cpu->firstpart[ll]].key,cpu->npart[ll],cpu->ncell[ll]); 
+
+      unsigned long km1=0;
+      if(ll>param->lcoarse){
+	km1=cpu->part[cpu->firstpart[ll]-1].key;
+      }
+      printf("ll=%d FP=%lu key=%lu keym1=%lu npart=%lu ncell=%lu\n",ll,cpu->firstpart[ll],cpu->part[cpu->firstpart[ll]].key,km1,cpu->npart[ll],cpu->ncell[ll]); 
       nparttotal+=cpu->npart[ll];
       ncelltotal+=cpu->ncell[ll];
     }
