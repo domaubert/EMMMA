@@ -39,12 +39,12 @@ REAL Advance_level(unsigned int level, struct CPU *cpu, struct PARAM *param){
     
     
 #if 1
-    {
-      unsigned long ktest;
-      ktest=3932848;
-      struct CELL *newcell=getcell(&ktest,7,cpu);
-      printf("ktest= %p\n",newcell);
-    }
+    /* { */
+    /*   unsigned long ktest; */
+    /*   ktest=3932848; */
+    /*   struct CELL *newcell=getcell(&ktest,7,cpu); */
+    /*   printf("ktest= %p\n",newcell); */
+    /* } */
 
     // REFINE/DESTROY ===========================================
     if((level<param->lmax)&&(param->lmax!=param->lcoarse)) {
@@ -59,26 +59,27 @@ REAL Advance_level(unsigned int level, struct CPU *cpu, struct PARAM *param){
       reorgpart(cpu,param); // reorganising the grid
       //}
     }
+    
 
     
     //===================
-    {
-      unsigned long ktest;
-      ktest=3932848;
-      struct CELL *newcell=getcell(&ktest,7,cpu);
-      printf("ktest= %p\n",newcell);
-    }
+    /* { */
+    /*   unsigned long ktest; */
+    /*   ktest=3932848; */
+    /*   struct CELL *newcell=getcell(&ktest,7,cpu); */
+    /*   printf("ktest= %p\n",newcell); */
+    /* } */
     
-    printf("CHECK POST REFINE\n");
-    nparttotal=0.;
-    ncelltotal=0.;
-    for(ll=param->lcoarse;ll<=param->lmax;ll++){
-      if(cpu->npart[ll]==0) continue;
-      printf("ll=%d FP=%lu key=%lu npart=%lu ncell=%lu\n",ll,cpu->firstpart[ll],cpu->part[cpu->firstpart[ll]].key,cpu->npart[ll],cpu->ncell[ll]); 
-      nparttotal+=cpu->npart[ll];
-      ncelltotal+=cpu->ncell[ll];
-    }
-    printf("total number of particles across levels =%ld // of cells =%lu\n",nparttotal,ncelltotal);
+    /* printf("CHECK POST REFINE\n"); */
+    /* nparttotal=0.; */
+    /* ncelltotal=0.; */
+    /* for(ll=param->lcoarse;ll<=param->lmax;ll++){ */
+    /*   if(cpu->npart[ll]==0) continue; */
+    /*   printf("ll=%d FP=%lu key=%lu npart=%lu ncell=%lu\n",ll,cpu->firstpart[ll],cpu->part[cpu->firstpart[ll]].key,cpu->npart[ll],cpu->ncell[ll]);  */
+    /*   nparttotal+=cpu->npart[ll]; */
+    /*   ncelltotal+=cpu->ncell[ll]; */
+    /* } */
+    /* printf("total number of particles across levels =%ld // of cells =%lu\n",nparttotal,ncelltotal); */
 
 
     // END REFINE/DESTROY========================================
@@ -86,19 +87,27 @@ REAL Advance_level(unsigned int level, struct CPU *cpu, struct PARAM *param){
 
 
     // COMPUTING TIMESTEPS ======================================
+    printf("===== setting tstep\n");
     REAL dtnew;
     dtnew=param->dt;
-    
+
+
+    //TMAX : we don't want to overshoot the tmax
+    REAL dtsim;
+    dtsim=param->time_max-cpu->atime[level];
+    dtnew=(dtsim<dtnew?dtsim:dtnew);
+    printf("dtsim=%e ",dtsim);
+
+    // PIC 
     REAL dtpic;
     dtpic=L_comptstep(level,cpu,param);
     dtnew=(dtpic<dtnew?dtpic:dtnew);
+    printf("dtpic=%e ",dtpic);
+ 
+
+    // assign new dtnew
     cpu->adt[level]=dtnew;
-
-   
-
-    
-
-
+    printf("dtnew=%e \n",dtnew);
 
     // CIC ======================================================
     printf("CIC on level %d\n",level);
@@ -136,9 +145,9 @@ REAL Advance_level(unsigned int level, struct CPU *cpu, struct PARAM *param){
     if(level<param->lmax){
       int ns;
       for(ns=0;ns<param->nsmooth;ns++){
+	mark_phy(level,cpu,param,ns);
 	mark_child(level,cpu,param,ns);
 	mark_nei(level,cpu,param,ns);
-	mark_phy(level,cpu,param,ns);
       }
     }
       
@@ -149,23 +158,23 @@ REAL Advance_level(unsigned int level, struct CPU *cpu, struct PARAM *param){
     cpu->aaexp[level]=interp_aexp(cpu->atime[level],(double *)param->cosmo->tab_aexp,(double *)param->cosmo->tab_ttilde); // update local expansion factor
     is++;
 
+    if(level==param->lcoarse){
+      printf("\n--------- GLOBAL CENSUS -----------\n");
+      nparttotal=0.;
+      ncelltotal=0.;
+      for(ll=param->lcoarse;ll<=param->lmax;ll++){
+	if(cpu->npart[ll]==0) continue;
 
-    printf("CHECK POST END\n");
-    nparttotal=0.;
-    ncelltotal=0.;
-    for(ll=param->lcoarse;ll<=param->lmax;ll++){
-      if(cpu->npart[ll]==0) continue;
-
-      unsigned long km1=0;
-      if(ll>param->lcoarse){
-	km1=cpu->part[cpu->firstpart[ll]-1].key;
+	unsigned long km1=0;
+	if(ll>param->lcoarse){
+	  km1=cpu->part[cpu->firstpart[ll]-1].key;
+	}
+	printf("ll=%d FP=%lu key=%lu keym1=%lu npart=%lu ncell=%lu\n",ll,cpu->firstpart[ll],cpu->part[cpu->firstpart[ll]].key,km1,cpu->npart[ll],cpu->ncell[ll]); 
+	nparttotal+=cpu->npart[ll];
+	ncelltotal+=cpu->ncell[ll];
       }
-      printf("ll=%d FP=%lu key=%lu keym1=%lu npart=%lu ncell=%lu\n",ll,cpu->firstpart[ll],cpu->part[cpu->firstpart[ll]].key,km1,cpu->npart[ll],cpu->ncell[ll]); 
-      nparttotal+=cpu->npart[ll];
-      ncelltotal+=cpu->ncell[ll];
+      printf("total number of particles across levels =%ld // of cells =%lu\n\n",nparttotal,ncelltotal);
     }
-    printf("total number of particles across levels =%ld // of cells =%lu\n",nparttotal,ncelltotal);
-
 
   }while((dt<cpu->adt[level-1])&&(is<nsub));
 

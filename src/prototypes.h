@@ -142,6 +142,8 @@ struct CPU{
   unsigned int ndumps;
   unsigned int rank;
   unsigned int nproc;
+  unsigned long key_coarse_min;
+  unsigned long key_coarse_max;
 
   REAL *adt; // array of dts (1 per level)
   REAL *aaexp; // array of expansion factors (1 per level)

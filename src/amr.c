@@ -38,7 +38,7 @@ void mark_phy(unsigned int level, struct CPU *cpu, struct PARAM *param, int ismo
   unsigned long nidx=cpu->ncell[level];
   unsigned long idx;
   int nm=0;
-  int marker=3+3*ismooth;
+  int marker=1+3*ismooth;
 
   for(idx=0;idx<nidx;idx++){
     if((cell->marked==0)&&(crit_phy(cell,cpu,param,level))){
@@ -48,7 +48,9 @@ void mark_phy(unsigned int level, struct CPU *cpu, struct PARAM *param, int ismo
     cell++;
   }
 
+#ifdef VERBOSE
   printf("%d/%ld PHY marked  on level %d\n",nm,nidx,level);
+#endif
 }
 
 
@@ -59,7 +61,7 @@ void mark_child(unsigned int level, struct CPU *cpu, struct PARAM *param, int is
   unsigned long nidx=cpu->ncell[level];
   unsigned long idx;
   int nm=0;
-  int marker=1+3*ismooth;
+  int marker=2+3*ismooth;
 
   for(idx=0;idx<nidx;idx++){
     if((cell->marked==0)&&(cell->child)){
@@ -79,8 +81,9 @@ void mark_child(unsigned int level, struct CPU *cpu, struct PARAM *param, int is
     }
     cell++;
   }
-
+#ifdef VERBOSE
   printf("%d/%ld CHI marked  on level %d\n",nm,nidx,level);
+#endif
 }
 
 
@@ -91,7 +94,7 @@ void mark_nei(unsigned int level, struct CPU *cpu, struct PARAM *param, int ismo
   unsigned long nidx=cpu->ncell[level];
   unsigned long idx;
   int nm=0;
-  int marker=2+3*ismooth;
+  int marker=3+3*ismooth;
 
   for(idx=0;idx<nidx;idx++){
     if((cell->marked>0)&&(cell->marked<marker)){
@@ -110,8 +113,9 @@ void mark_nei(unsigned int level, struct CPU *cpu, struct PARAM *param, int ismo
     }
     cell++;
   }
-
+#ifdef VERBOSE
   printf("%d/%ld NEI marked  on level %d\n",nm,nidx,level);
+#endif
 }
 
 
@@ -201,8 +205,10 @@ void create_cell(unsigned int level, struct CPU *cpu, struct PARAM *param){
     }
     cell++;
   }
+#ifdef VERBOSE
 #ifdef PIC
   printf("%d particles to be refined\n",np);
+#endif
 #endif
 }
 
@@ -261,9 +267,12 @@ void destroy_cell(unsigned int level, struct CPU *cpu, struct PARAM *param){
     cell++;
   }
 
+#ifdef VERBOSE
 #ifdef PIC
   printf("%d particles to be derefined\n",np);
 #endif
+#endif
+
 
   // once done, we rescan all the level+1 cell to nullify them and change their keys
   cell=&(cpu->grid[cpu->firstcell[level+1]]);

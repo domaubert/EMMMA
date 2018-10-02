@@ -19,7 +19,7 @@ endif
 
 # main compiler
 CC= gcc
-C_FLAGS=  -g -O2 -Wall  #-ftree-vectorize -ffast-math -fno-cx-limited-range -O3 -Wimplicit -g
+C_FLAGS=  -g -O2 -Wall -ftree-vectorize -ffast-math -fno-cx-limited-range -O3 -Wimplicit -g
 C_LIBS= -lm #-fopenmp -lstdc++
 
 #GPU compiler

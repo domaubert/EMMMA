@@ -265,7 +265,7 @@ int main(int argc, char *argv[]){
   cosmo.tab_ttilde=(REAL *)tab_ttilde;
   
   param.time_max=tmax;
-  printf("tmax=%e\n",tmax);
+
   mkdir("data/", 0755);
   //if(cpu.rank==RANK_DISP) dumpHeader(&param,&cpu,argv[1]);
 
@@ -316,9 +316,9 @@ int main(int argc, char *argv[]){
 
 
   int nsteps;
-  for(nsteps=nstepstart;(nsteps<=param.nsteps)*(tsim<tmax);nsteps++){
+  for(nsteps=nstepstart;(nsteps<=param.nsteps)*(cosmo.tsim<param.time_max);nsteps++){
 
-    if(cpu.rank==RANK_DISP) printf("\n============== STEP %d aexp=%e z=%lf tconf=%e tmax=%e================\n",nsteps,cosmo.aexp,1./cosmo.aexp-1.,tsim,tmax);
+    if(cpu.rank==RANK_DISP) printf("\n============== STEP %d z=%lf aexp=%e-->%e  tconf=%e-->%e ================\n",nsteps,1./cosmo.aexp-1.,cosmo.aexp,param.tmax,cosmo.tsim,param.time_max);
 
 
       // Resetting the timesteps
@@ -342,6 +342,7 @@ int main(int argc, char *argv[]){
        if(nsteps%param.ndumps==0){
 	dumpalloct_serial("./data/",cosmo.aexp,&param, &cpu,param.lmax);
 	dumppart_serial("./data/",cosmo.aexp,&param, &cpu,param.lmax);
+	cpu.ndumps++;
       }
 
 

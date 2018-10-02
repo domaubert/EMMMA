@@ -1,13 +1,13 @@
 ##==MemoryManagement=========
-max_number_of_octs 1000000
+max_number_of_octs 2000000
 max_number_of_part 800000
 mpi_buffer_size 50000
 ##==TimestepManagement=======
-output_frequency 10
+output_frequency 20
 dt_dump 0
-max_nuber_of_steps 11
+max_nuber_of_steps 300
 time_step_max  1e0
-tmax_or_amax 1.0
+tmax_or_amax 0.15
 ##==AMRGrid==================
 level_coarse 6
 level_max 9
@@ -18,7 +18,7 @@ dm_res 0
 dx_res 500.
 ##==PoissonSolver============
 max_number_of_relaxation_poisson 1000
-poisson_accuracy 1e-5
+poisson_accuracy 1e-3
 mgrid_lmin 3
 mgrid_nvcycles 3
 mgrid_nsmooth 5
