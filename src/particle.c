@@ -223,12 +223,13 @@ void L_movepart(unsigned int level, struct CPU *cpu, struct PARAM *param, int is
   }
 
   REAL mmdisp;
-#ifdef WMPI
-  MPI_Allreduce(&mdisp,&mmdisp,1,MPI_REEL,MPI_MAX,cpu->comm);
-  //  mdisp=mmdisp;
-#else
   mmdisp=mdisp;
-#endif
+/* #ifdef WMPI */
+/*   MPI_Allreduce(&mdisp,&mmdisp,1,MPI_REEL,MPI_MAX,cpu->comm); */
+/*   //  mdisp=mmdisp; */
+/* #else */
+  /* mmdisp=mdisp; */
+/* #endif */
 
   if(cpu->rank==RANK_DISP) printf("level=%d maxdisp=%e or %e dx\n",level,SQRT(mmdisp),SQRT(mmdisp)/dxcur);
 

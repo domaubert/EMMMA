@@ -18,8 +18,8 @@ endif
 #===============================================================================
 
 # main compiler
-CC= gcc
-C_FLAGS=  -g -O2 -Wall -ftree-vectorize -ffast-math -fno-cx-limited-range -O3 -Wimplicit -g
+CC= mpicc
+C_FLAGS=  -g -O2 -Wall -ftree-vectorize -ffast-math -fno-cx-limited-range -Wimplicit
 C_LIBS= -lm #-fopenmp -lstdc++
 
 #GPU compiler
@@ -46,15 +46,15 @@ I_DIR += -I/usr/include/
 #LD_FLAGS += -lcuda
 
 #MPI
-#I_DIR += -I/usr/include/mpi
-#LD_DIR += -L/usr/lib
-#LD_FLAGS += -lmpi
+I_DIR += -I/usr/include/mpi
+LD_DIR += -L/usr/lib
+LD_FLAGS += -lmpi
 
 #===============================================================================
 # Obj
 #===============================================================================
 
-C_OBJS= emmma.o allocation.o morton.o io.o amr.o poisson.o cic.o parameters.o ic.o friedmann.o advance.o particle.o
+C_OBJS= emmma.o allocation.o morton.o io.o amr.o poisson.o cic.o parameters.o ic.o friedmann.o advance.o particle.o communication.o
 
 CUDA_OBJS= \
 	interface.o \

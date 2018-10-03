@@ -235,21 +235,21 @@ if (debug) printf("file open\n");
   }
 
 
-#ifdef WMPI
-  // Massive broadcast of grafic header
-  MPI_Bcast(&np1,1,MPI_INT,0,cpu->comm);
-  MPI_Bcast(&np2,1,MPI_INT,0,cpu->comm);
-  MPI_Bcast(&np3,1,MPI_INT,0,cpu->comm);
-  MPI_Bcast(&dx,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&x1o,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&x2o,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&x3o,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&astart,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&om,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&ov,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&h0,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Barrier(cpu->comm);
-#endif
+/* #ifdef WMPI */
+/*   // Massive broadcast of grafic header */
+/*   MPI_Bcast(&np1,1,MPI_INT,0,cpu->comm); */
+/*   MPI_Bcast(&np2,1,MPI_INT,0,cpu->comm); */
+/*   MPI_Bcast(&np3,1,MPI_INT,0,cpu->comm); */
+/*   MPI_Bcast(&dx,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&x1o,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&x2o,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&x3o,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&astart,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&om,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&ov,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&h0,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Barrier(cpu->comm); */
+/* #endif */
 
 if (debug) printf("header read ok\n");
 
@@ -384,19 +384,19 @@ if (debug) printf("flag\n");
 
 
 
-#ifdef WMPI
-    MPI_Barrier(cpu->comm);
-    MPI_Bcast(velx,np1*np2,MPI_FLOAT,0,cpu->comm);
-    MPI_Bcast(vely,np1*np2,MPI_FLOAT,0,cpu->comm);
-    MPI_Bcast(velz,np1*np2,MPI_FLOAT,0,cpu->comm);
+/* #ifdef WMPI */
+/*     MPI_Barrier(cpu->comm); */
+/*     MPI_Bcast(velx,np1*np2,MPI_FLOAT,0,cpu->comm); */
+/*     MPI_Bcast(vely,np1*np2,MPI_FLOAT,0,cpu->comm); */
+/*     MPI_Bcast(velz,np1*np2,MPI_FLOAT,0,cpu->comm); */
 
-#ifndef EMMAZELDO
-    MPI_Bcast(dispx,np1*np2,MPI_FLOAT,0,cpu->comm);
-    MPI_Bcast(dispy,np1*np2,MPI_FLOAT,0,cpu->comm);
-    MPI_Bcast(dispz,np1*np2,MPI_FLOAT,0,cpu->comm);
-#endif
+/* #ifndef EMMAZELDO */
+/*     MPI_Bcast(dispx,np1*np2,MPI_FLOAT,0,cpu->comm); */
+/*     MPI_Bcast(dispy,np1*np2,MPI_FLOAT,0,cpu->comm); */
+/*     MPI_Bcast(dispz,np1*np2,MPI_FLOAT,0,cpu->comm); */
+/* #endif */
 
-#endif
+/* #endif */
 
 
     z0=(i3-0.5)*dx;
@@ -520,9 +520,9 @@ if (debug) printf("flag\n");
   printf("\nREAD DONE ON %d with npart=%d xmin=%f xmax=%f ymin=%f ymax=%f zmin=%f zmax=%f rstar=%e mass=%e\n",cpu->rank,ip,xmin,xmax,ymin,ymax,zmin,zmax,rstar,mass);
 
 
-#ifdef WMPI
-  MPI_Barrier(cpu->comm);
-#endif
+/* #ifdef WMPI */
+/*   MPI_Barrier(cpu->comm); */
+/* #endif */
 
   if(cpu->rank==RANK_DISP)
   {
@@ -653,9 +653,9 @@ struct PART * read_split_grafic_part(struct PART *part, struct CPUINFO *cpu, REA
 
     int nptot=np1*np2*np3;
 
-#ifdef WMPI
-  MPI_Allreduce(MPI_IN_PLACE,&nptot,1,MPI_INT,MPI_SUM,cpu->comm);
-#endif
+/* #ifdef WMPI */
+/*   MPI_Allreduce(MPI_IN_PLACE,&nptot,1,MPI_INT,MPI_SUM,cpu->comm); */
+/* #endif */
 
   // NOTE WE ASSUME CUBICAL VOLUME
 
@@ -931,9 +931,9 @@ if(segment_part(xs,ys,zs,cpu,cpu->levelcoarse)){
   printf("READ DONE ON %d with npart=%d xmin=%f xmax=%f ymin=%f ymax=%f zmin=%f zmax=%f rstar=%e mass=%e\n",cpu->rank,ip,xmin,xmax,ymin,ymax,zmin,zmax,rstar,mass);
 
 
-#ifdef WMPI
-  MPI_Barrier(cpu->comm);
-#endif
+/* #ifdef WMPI */
+/*   MPI_Barrier(cpu->comm); */
+/* #endif */
 
   if(cpu->rank==RANK_DISP)
     {
@@ -1610,22 +1610,22 @@ int read_evrard_hydro(struct CPUINFO *cpu,struct OCT **firstoct, struct RUNPARAM
   // setting baryon density parameter
   ob=OMEGAB;
 
-#ifdef WMPI
-  // Massive broadcast of grafic header
-  MPI_Bcast(&np1,1,MPI_INT,0,cpu->comm);
-  MPI_Bcast(&np2,1,MPI_INT,0,cpu->comm);
-  MPI_Bcast(&np3,1,MPI_INT,0,cpu->comm);
-  MPI_Bcast(&dx,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&x1o,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&x2o,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&x3o,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&astart,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&om,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&ov,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Bcast(&h0,1,MPI_FLOAT,0,cpu->comm);
-  MPI_Barrier(cpu->comm);
+/* #ifdef WMPI */
+/*   // Massive broadcast of grafic header */
+/*   MPI_Bcast(&np1,1,MPI_INT,0,cpu->comm); */
+/*   MPI_Bcast(&np2,1,MPI_INT,0,cpu->comm); */
+/*   MPI_Bcast(&np3,1,MPI_INT,0,cpu->comm); */
+/*   MPI_Bcast(&dx,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&x1o,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&x2o,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&x3o,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&astart,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&om,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&ov,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Bcast(&h0,1,MPI_FLOAT,0,cpu->comm); */
+/*   MPI_Barrier(cpu->comm); */
 
-#endif
+/* #endif */
 
   if(cpu->rank==0){
     printf("============================================\n");
@@ -1739,13 +1739,13 @@ int read_evrard_hydro(struct CPUINFO *cpu,struct OCT **firstoct, struct RUNPARAM
       outf=fread(&dummy,1,sizeof(dummy),fz);
     }
 
-#ifdef WMPI
-    MPI_Barrier(cpu->comm);
-    MPI_Bcast(deltab,np1*np2,MPI_FLOAT,0,cpu->comm);
-    MPI_Bcast(velx,np1*np2,MPI_FLOAT,0,cpu->comm);
-    MPI_Bcast(vely,np1*np2,MPI_FLOAT,0,cpu->comm);
-    MPI_Bcast(velz,np1*np2,MPI_FLOAT,0,cpu->comm);
-#endif
+/* #ifdef WMPI */
+/*     MPI_Barrier(cpu->comm); */
+/*     MPI_Bcast(deltab,np1*np2,MPI_FLOAT,0,cpu->comm); */
+/*     MPI_Bcast(velx,np1*np2,MPI_FLOAT,0,cpu->comm); */
+/*     MPI_Bcast(vely,np1*np2,MPI_FLOAT,0,cpu->comm); */
+/*     MPI_Bcast(velz,np1*np2,MPI_FLOAT,0,cpu->comm); */
+/* #endif */
 
     z0=(i3*1.0)/(np3);
     for(i2=0;i2<np2;i2++){
@@ -1865,9 +1865,9 @@ int read_evrard_hydro(struct CPUINFO *cpu,struct OCT **firstoct, struct RUNPARAM
 
 /* if(cpu->rank==RANK_DISP) printf("navg=%e \n",navg); */
 
-#ifdef WMPI
-  MPI_Barrier(cpu->comm);
-#endif
+/* #ifdef WMPI */
+/*   MPI_Barrier(cpu->comm); */
+/* #endif */
   if(cpu->rank==RANK_DISP) printf("Grafic hydro read ok\n");
   return ifound;
 }
@@ -2007,9 +2007,9 @@ int read_evrard_hydro(struct CPUINFO *cpu,struct OCT **firstoct, struct RUNPARAM
 
   int nptot=np1*np2*np3;
 
-#ifdef WMPI
-  MPI_Allreduce(MPI_IN_PLACE,&nptot,1,MPI_INT,MPI_SUM,cpu->comm);
-#endif
+/* #ifdef WMPI */
+/*   MPI_Allreduce(MPI_IN_PLACE,&nptot,1,MPI_INT,MPI_SUM,cpu->comm); */
+/* #endif */
 
   // NOTE WE ASSUME CUBICAL VOLUME
 
@@ -2249,9 +2249,9 @@ int read_evrard_hydro(struct CPUINFO *cpu,struct OCT **firstoct, struct RUNPARAM
 
   /* if(cpu->rank==RANK_DISP) printf("navg=%e \n",navg); */
 
-#ifdef WMPI
-  MPI_Barrier(cpu->comm);
-#endif
+/* #ifdef WMPI */
+/*   MPI_Barrier(cpu->comm); */
+/* #endif */
   if(cpu->rank==RANK_DISP) printf("Grafic hydro read ok with ifound=%d on proc %d\n",ifound,cpu->rank);
 
 

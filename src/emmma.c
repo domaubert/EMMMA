@@ -4,6 +4,8 @@
 #include <string.h>
 #include <math.h>
 #include <sys/stat.h>
+#include <mpi.h>
+
 
 #include "constant.h"
 #include "prototypes.h"
@@ -17,6 +19,7 @@
 #include "ic.h"
 #include "friedmann.h"
 #include "advance.h"
+#include "communication.h"
 
 #define LEVCOARSE 5
 #define LEVMAX 6
@@ -25,6 +28,11 @@
 
 
 int main(int argc, char *argv[]){
+
+#ifdef WMPI
+  MPI_Init(&argc,&argv);
+#endif
+
   // ================= ZE DATA
   struct CPU cpu;
   struct PARAM param;
@@ -50,6 +58,16 @@ int main(int argc, char *argv[]){
   param.physical_state = &physical_state; 
 
 
+  //=========== MPI init =============
+#ifdef WMPI
+  init_MPI(&cpu);
+  printf("I'm %d over %d\n",cpu.rank,cpu.nproc);
+#else
+  cpu.rank=0;
+  cpu.nproc=1;
+#endif
+
+
   //=========== some initial calls =============
   GetParameters(argv[1],&param); // reading the parameters file
   strcpy(param.paramrunfile,argv[1]);
@@ -67,8 +85,6 @@ int main(int argc, char *argv[]){
   readOutputParam_part(partoutput, &param);
 
 
-  cpu.rank=0;
-  cpu.nproc=1;
 
   
   // =================== Starting Banner
@@ -82,7 +98,6 @@ int main(int argc, char *argv[]){
 
     copy_file(param.paramrunfile, "data/param.run");
   }
-
 
 
   //==================================   reading outputlist
@@ -120,13 +135,13 @@ int main(int argc, char *argv[]){
 	printf("\n");
   }
 
-
   // ================================  building the initial coarse grid
   build_init_grid(&cpu,&param);
   reorg(&cpu,&param); //reorganising the grid
   
   if(cpu.rank==RANK_DISP) printf("init grid done\n");
 
+  abort();
 
   //=================================  building the array of timesteps
   int level;
@@ -286,21 +301,6 @@ int main(int argc, char *argv[]){
   //
   //================================================================================
 
-  /*  // CIC */
-  /* cic(param.lcoarse,&cpu,&param); */
-  
-
-
-  /* // POISSON SOLVER */
-  /* FillDens(param.lcoarse,&cpu,&param); */
-  /* PoissonSolver(param.lcoarse,&param,&cpu,1.0); */
-  
-  
-  /* //DUMP */
-  /* dumpalloct_serial("./data/",1.0,&param, &cpu,param.lmax); */
-  
-
-
 #if 1 // Balise
 
 
@@ -354,6 +354,11 @@ int main(int argc, char *argv[]){
 
 #endif // BALISE COMPIL
 
+
+#ifdef WMPI
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Finalize();
+#endif
 
     printf("Done\n");
     

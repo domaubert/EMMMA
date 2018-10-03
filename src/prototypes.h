@@ -214,7 +214,7 @@ struct PARAM{
   int nrestart; ///< the restart snapshot
   int nsubcycles; ///< number of subcyles in AMR advance procedure
 
-  int mgridlmin; // can be negative for relative lmin
+  int mgridlmin; 
   unsigned int niter;
   unsigned int nrelax;
   unsigned int nvcycles;

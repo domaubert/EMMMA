@@ -278,19 +278,19 @@ REAL PoissonJacobi(int level,struct PARAM *param, struct CPU *cpu)
     normp=0.;
     if(nread) update_pot_in_tree(level,cpu,param,&dist,&normp);
     
-#ifdef WMPI
-    if((iter<=param->niter)||(iter%1==0)){
-      mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,(iter==0),level); // potential field exchange
-      if(iter==0){
-	MPI_Allreduce(MPI_IN_PLACE,&fnorm,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD);
-      }
-      else{
-	MPI_Allreduce(MPI_IN_PLACE,&residual,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD);
-	MPI_Allreduce(MPI_IN_PLACE,&dist,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD);
-	MPI_Allreduce(MPI_IN_PLACE,&normp,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD);
-      }
-    }
-#endif
+/* #ifdef WMPI */
+/*     if((iter<=param->niter)||(iter%1==0)){ */
+/*       mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,(iter==0),level); // potential field exchange */
+/*       if(iter==0){ */
+/* 	MPI_Allreduce(MPI_IN_PLACE,&fnorm,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD); */
+/*       } */
+/*       else{ */
+/* 	MPI_Allreduce(MPI_IN_PLACE,&residual,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD); */
+/* 	MPI_Allreduce(MPI_IN_PLACE,&dist,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD); */
+/* 	MPI_Allreduce(MPI_IN_PLACE,&normp,1,MPI_REEL,MPI_SUM,MPI_COMM_WORLD); */
+/*       } */
+/*     } */
+/* #endif */
     
     if((iter==1)&&(level>=param->lcoarse)) res0=residual; // to keep track of convergence progress
     
@@ -404,9 +404,9 @@ REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu)
   REAL dres;
   // pre-relaxation
 
-#ifdef WMPI
-  mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,(level==param->lcoarse),level); // potential field exchange
-#endif
+/* #ifdef WMPI */
+/*   mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,(level==param->lcoarse),level); // potential field exchange */
+/* #endif */
 
 #ifndef GPUAXL
   dres=PoissonJacobi(level,param,cpu);
@@ -422,9 +422,9 @@ REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu)
   // full relaxation at coarsest level or recursive call to mgrid
 
   if((level-1)==param->mgridlmin){
-#ifdef WMPI
-    mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,0,level-1); // potential field exchange
-#endif
+/* #ifdef WMPI */
+/*     mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,0,level-1); // potential field exchange */
+/* #endif */
 
 #ifndef GPUAXL
     PoissonJacobi(level-1,param,cpu);
@@ -443,9 +443,9 @@ REAL PoissonMgrid(int level,struct PARAM *param, struct CPU *cpu)
   ProlongationCor(level,param,cpu);
 
   // post relaxation
-#ifdef WMPI
-  mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,0,level); // potential field exchange
-#endif
+/* #ifdef WMPI */
+/*   mpi_exchange_pot_level(cpu,cpu->sendbuffer,cpu->recvbuffer,0,level); // potential field exchange */
+/* #endif */
 
 #ifndef GPUAXL
   dres=PoissonJacobi(level,param,cpu);
@@ -464,10 +464,10 @@ int PoissonSolver(int level,struct PARAM *param, struct CPU *cpu){
   REAL res;
   double t[10]={0,0,0,0,0,0,0,0,0,0};
 
-#ifdef WMPI
-  MPI_Barrier(cpu->comm);
-  t[0]=MPI_Wtime();
-#endif
+/* #ifdef WMPI */
+/*   MPI_Barrier(cpu->comm); */
+/*   t[0]=MPI_Wtime(); */
+/* #endif */
 
   if(cpu->rank==RANK_DISP) printf("Start Poisson Solver ");
 
@@ -494,10 +494,10 @@ int PoissonSolver(int level,struct PARAM *param, struct CPU *cpu){
   Prolongation(level+1,param,cpu);
 
 
-#ifdef WMPI
-  MPI_Barrier(cpu->comm);
-  t[9]=MPI_Wtime();
-#endif
+/* #ifdef WMPI */
+/*   MPI_Barrier(cpu->comm); */
+/*   t[9]=MPI_Wtime(); */
+/* #endif */
 
  if(cpu->rank==RANK_DISP){
 #ifndef GPUAXL
